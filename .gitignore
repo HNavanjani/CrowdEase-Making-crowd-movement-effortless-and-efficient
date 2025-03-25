@@ -1,0 +1,6 @@
+# To ignore .env and other sensitive/dev files
+.env
+__pycache__/
+*.pyc
+.idea/
+.vscode/

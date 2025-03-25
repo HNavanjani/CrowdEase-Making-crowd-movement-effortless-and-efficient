@@ -1,0 +1,5 @@
+# List of all Python packages to install
+requests
+protobuf
+gtfs-realtime-bindings
+python-dotenv
