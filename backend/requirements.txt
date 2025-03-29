@@ -44,7 +44,7 @@ fastapi==0.110.0
 uvicorn==0.27.1
 
 # Required for decoding Google's GTFS real-time data (Protobuf format)
-protobuf==4.25.3
+protobuf==3.20.3
 
 # Python wrapper for GTFS Realtime protobuf messages
 gtfs-realtime-bindings==0.0.7
