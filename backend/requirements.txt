@@ -1,0 +1,54 @@
+# ========================================================
+# Requirements for CrowdEase FastAPI Backend (Group Setup)
+# ========================================================
+
+# Setup Instructions:
+#
+# 1. Install Python (recommended: Python 3.10 or higher)
+#    Download from: https://www.python.org/downloads/
+#    During installation, check the box: "Add Python to PATH"
+#
+# 2. (Optional) Create a virtual environment:
+#    Command: python -m venv venv
+#
+# 3. Activate the virtual environment:
+#    On Windows:   venv\Scripts\activate
+#    On Mac/Linux: source venv/bin/activate
+#
+# 4. Install all dependencies:
+#    Command: pip install -r requirements.txt
+#
+# 5. Run the FastAPI development server:
+#    Command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+#
+# 6. Test the API endpoint:
+#    Visit: http://localhost:8000/getBusPositions
+#
+# 7. To deploy online, use a service like Render.com
+#    Set environment variables like TFNSW_API_KEY using Render's dashboard.
+
+# ======================
+# Backend Dependencies
+# ======================
+
+# HTTP library for sending requests to external APIs (e.g., TfNSW)
+requests==2.31.0
+
+# Loads environment variables from .env file
+python-dotenv==1.0.1
+
+# Web framework for building APIs
+fastapi==0.110.0
+
+# ASGI web server to run FastAPI
+uvicorn==0.27.1
+
+# Required for decoding Google's GTFS real-time data (Protobuf format)
+protobuf==3.20.3
+
+# Python wrapper for GTFS Realtime protobuf messages
+gtfs-realtime-bindings==0.0.7
+
+# ======================
+# End of Requirements
+# ======================
