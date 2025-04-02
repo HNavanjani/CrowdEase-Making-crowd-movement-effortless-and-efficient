@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import bus
+from app.routes import historical
+from app.routes import csv_preview
 
 # Initialize FastAPI application instance
 app = FastAPI()
@@ -15,11 +16,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register bus-related API routes
-app.include_router(bus.router)
+# Register historical crowd-related API routes
+app.include_router(historical.router)
+app.include_router(csv_preview.router)
+
 
 # Root endpoint for health check or base URL message
-# Useful for confirming the API is up and running
 @app.get("/")
 def root():
     return {"message": "CrowdEase API is running"}
