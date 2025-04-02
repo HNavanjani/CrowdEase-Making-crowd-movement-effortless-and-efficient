@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'features/bus/screens/live_bus_positions.dart';
+import 'features/common/screens/splash_screen.dart';
+import 'features/common/screens/home_screen.dart';
+
 
 void main() {
   runApp(const MyApp());
@@ -8,14 +10,16 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  @override
+   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'CrowdEase',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const LiveBusPositions(),
+      theme: ThemeData(primarySwatch: Colors.indigo),
+      debugShowCheckedModeBanner: false,
+      home: const SplashScreen(),
+      routes: {
+        '/home': (context) => const HomeScreen(), // 👈 This is the fix
+      },
     );
   }
 }
