@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import bus
-from app.routes.routes import router as route_router 
+from app.routes.routes import router as route_router
+from app.routes.csv_preview import router as csv_preview_router 
+from app.routes.data_cleaner import router as cleaner_router
 
 app = FastAPI()
 
@@ -15,6 +17,8 @@ app.add_middleware(
 
 app.include_router(bus.router)
 app.include_router(route_router)
+app.include_router(csv_preview_router)
+app.include_router(cleaner_router)
 
 @app.get("/")
 def root():
