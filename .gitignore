@@ -6,4 +6,4 @@ __pycache__/
 .vscode/
 datasets/
 processed/
-lib/firebase_options.dart
+frontend/crowdease/lib/firebase_options.dart
