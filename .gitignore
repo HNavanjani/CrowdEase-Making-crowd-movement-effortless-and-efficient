@@ -7,3 +7,4 @@ __pycache__/
 datasets/
 processed/
 frontend/crowdease/lib/firebase_options.dart
+backend/env

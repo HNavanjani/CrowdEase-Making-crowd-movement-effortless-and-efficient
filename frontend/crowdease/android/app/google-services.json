@@ -12,15 +12,40 @@
           "package_name": "com.example.crowdease"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "584621606071-22p2flct6e8ahumkg3k5bcd20qk9rr8j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.crowdease",
+            "certificate_hash": "04e35a5bf96014ced86fbec602bcfc296ba2d7d1"
+          }
+        },
+        {
+          "client_id": "584621606071-9f3hro3g0crclor3mb5ki6uctfqjclk5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyBRRGu-INHbu8p4lqGuWTJGxOZhicvutuQ"
+          "current_key": "AIzaSyA-8etS6gzj56XiN6R_ikTsFZLgJGuQkec"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "584621606071-9f3hro3g0crclor3mb5ki6uctfqjclk5.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "584621606071-np2p2d5vr4rb0o2u35sovurme9raebrk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.crowdease"
+              }
+            }
+          ]
         }
       }
     }
