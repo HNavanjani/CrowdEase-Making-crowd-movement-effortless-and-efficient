@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../bus/screens/live_bus_positions.dart';
+import '../../hub_overview/hub_overview_screen.dart'; // ✅ Import your real screen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,9 +12,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  final user = FirebaseAuth.instance.currentUser;
 
   final List<Widget> _screens = [
-    const Center(child: Text('Hub Overview (Destinations)')),
+    HubOverviewScreen(), // ✅ Replaced placeholder with real screen
     const Center(child: Text('Alerts & Personalized Suggestions')),
     const Center(child: Text('Journey Planner (Directions)')),
     const Center(child: Text('More: Forecast, History, Help, etc.')),
@@ -24,15 +27,28 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _showProfileMenu() {
-    showMenu(
+  void _showProfileMenu() async {
+    final result = await showMenu(
       context: context,
       position: const RelativeRect.fromLTRB(1000, 80, 10, 100),
-      items: const [
-        PopupMenuItem(child: Text("Profile")),
-        PopupMenuItem(child: Text("Logout")),
+      items: [
+        PopupMenuItem(
+          value: 'profile',
+          child: Text(user?.displayName ?? 'Profile'),
+        ),
+        const PopupMenuItem(
+          value: 'logout',
+          child: Text("Logout"),
+        ),
       ],
     );
+
+    if (result == 'logout') {
+      await FirebaseAuth.instance.signOut();
+      if (context.mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    }
   }
 
   @override
@@ -57,10 +73,27 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.indigo),
-              child: Text('CrowdEase Menu',
-                  style: TextStyle(color: Colors.white, fontSize: 18)),
+            DrawerHeader(
+              decoration: const BoxDecoration(color: Colors.indigo),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundImage: NetworkImage(user?.photoURL ?? ''),
+                    backgroundColor: Colors.white,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    user?.displayName ?? 'Guest',
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                  Text(
+                    user?.email ?? '',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ],
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.map),
@@ -75,12 +108,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),
-              onTap: () {}, // to be added later
+              onTap: () {},
             ),
             ListTile(
               leading: const Icon(Icons.history),
               title: const Text('Travel History & Insights'),
-              onTap: () {}, // to be added later
+              onTap: () {},
             ),
             ListTile(
               leading: const Icon(Icons.notification_important),
@@ -90,28 +123,26 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.lightbulb),
               title: const Text('Personalized Suggestions'),
-              onTap: () {}, // to be added later
+              onTap: () {},
             ),
             ListTile(
               leading: const Icon(Icons.timeline),
               title: const Text('Simulated Forecast'),
-              onTap: () {}, // to be added later
+              onTap: () {},
             ),
             ListTile(
               leading: const Icon(Icons.analytics),
               title: const Text('Route Performance'),
-              onTap: () {}, // to be added later
+              onTap: () {},
             ),
             ListTile(
               leading: const Icon(Icons.directions_bus),
               title: const Text('Live Bus Positions'),
               onTap: () {
-                Navigator.pop(context); // close drawer
+                Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const LiveBusPositions(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const LiveBusPositions()),
                 );
               },
             ),
@@ -119,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.info),
               title: const Text('Help / About'),
-              onTap: () {}, // to be added later
+              onTap: () {},
             ),
           ],
         ),

@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; 
+import 'firebase_options.dart';
 
 import 'features/common/screens/splash_screen.dart';
 import 'features/common/screens/home_screen.dart';
+import 'features/auth/screens/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } else {
+      Firebase.app();
+    }
+  } catch (e) {
+    debugPrint('Firebase initialization error: $e');
+  }
+
   runApp(const MyApp());
 }
 
@@ -22,9 +33,10 @@ class MyApp extends StatelessWidget {
       title: 'CrowdEase',
       theme: ThemeData(primarySwatch: Colors.indigo),
       debugShowCheckedModeBanner: false,
-      home: const SplashScreen(), 
+      home: const SplashScreen(),
       routes: {
         '/home': (context) => const HomeScreen(),
+        '/login': (context) => const LoginScreen(),
       },
     );
   }
