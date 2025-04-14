@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../bus/screens/live_bus_positions.dart';
-import '../../hub_overview/hub_overview_screen.dart'; // ✅ Import your real screen
+import '../../hub_overview/hub_overview_screen.dart';
+import '../../crowd_map_planner/crowd_map_and_planner_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,9 +16,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final user = FirebaseAuth.instance.currentUser;
 
   final List<Widget> _screens = [
-    HubOverviewScreen(), // ✅ Replaced placeholder with real screen
+    HubOverviewScreen(), // F1
     const Center(child: Text('Alerts & Personalized Suggestions')),
-    const Center(child: Text('Journey Planner (Directions)')),
+    CrowdMapAndPlannerScreen(), // F2
     const Center(child: Text('More: Forecast, History, Help, etc.')),
   ];
 
@@ -98,12 +99,18 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.map),
               title: const Text('Destinations (Hub Overview)'),
-              onTap: () => setState(() => _selectedIndex = 0),
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => _selectedIndex = 0);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.alt_route),
               title: const Text('Directions (Journey Planner)'),
-              onTap: () => setState(() => _selectedIndex = 2),
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => _selectedIndex = 2);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.settings),

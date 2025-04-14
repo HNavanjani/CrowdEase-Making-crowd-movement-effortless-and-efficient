@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../features/crowd_map_planner/crowd_map_and_planner_screen.dart';
 import 'dummy_data.dart';
 
 class HubOverviewScreen extends StatelessWidget {
@@ -91,12 +92,19 @@ class HubOverviewScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 OutlinedButton.icon(
-                  onPressed: () => Navigator.pushNamed(context, '/alerts'),
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/alerts'); // if routing exists
+                  },
                   icon: const Icon(Icons.notifications, color: Colors.indigo),
                   label: const Text("See Alerts"),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () => Navigator.pushNamed(context, '/journey_planner'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CrowdMapAndPlannerScreen()),
+                    );
+                  },
                   icon: const Icon(Icons.alt_route, color: Colors.indigo),
                   label: const Text("Plan Journey"),
                 ),
