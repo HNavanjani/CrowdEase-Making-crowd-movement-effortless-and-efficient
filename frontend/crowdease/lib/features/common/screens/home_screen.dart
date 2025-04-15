@@ -1,8 +1,13 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+
 import '../../bus/screens/live_bus_positions.dart';
 import '../../hub_overview/hub_overview_screen.dart';
 import '../../crowd_map_planner/crowd_map_and_planner_screen.dart';
+import '../../crowd_feedback/feedback_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,13 +19,63 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final user = FirebaseAuth.instance.currentUser;
+  Timer? _pollingTimer;
 
   final List<Widget> _screens = [
     HubOverviewScreen(), // F1
     const Center(child: Text('Alerts & Personalized Suggestions')),
     CrowdMapAndPlannerScreen(), // F2
-    const Center(child: Text('More: Forecast, History, Help, etc.')),
+    FeedbackScreen(), // Feedback
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _startPollingForNewModel();
+  }
+
+  void _startPollingForNewModel() {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
+      final response = await http.get(Uri.parse("http://localhost:8000/check-new-model"));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data["new_model_available"] == true) {
+          _pollingTimer?.cancel();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('New predictions available'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }
+      }
+    });
+  }
+
+  void _manualCheckNewModel() async {
+    final response = await http.get(Uri.parse("http://localhost:8000/check-new-model"));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data["new_model_available"] == true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('New predictions available'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
 
   void _onBottomNavTap(int index) {
     setState(() {
@@ -64,6 +119,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _manualCheckNewModel,
+          ),
           IconButton(
             icon: const Icon(Icons.account_circle),
             onPressed: _showProfileMenu,
@@ -110,6 +169,14 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () {
                 Navigator.pop(context);
                 setState(() => _selectedIndex = 2);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.feedback),
+              title: const Text('Submit Feedback'),
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => _selectedIndex = 3);
               },
             ),
             ListTile(
@@ -172,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Alerts'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: 'More'),
+          BottomNavigationBarItem(icon: Icon(Icons.feedback), label: 'Feedback'),
         ],
       ),
     );

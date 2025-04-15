@@ -1,0 +1,6 @@
+Last trained: 2025-04-15 17:18:37
+Best Model: LogisticRegression
+Accuracy: 0.9303
+Precision: 0.8654
+Recall: 0.9303
+F1 Score: 0.8967

@@ -11,6 +11,8 @@ from app.routes import trip_updates
 from app.routes import ors_route
 from app.routes import ors_isochrone
 from app.routes import ors_matrix
+from app.routes import dropdown_data
+from app.routes import dropdown_options
 
 
 app = FastAPI()
@@ -34,6 +36,8 @@ app.include_router(trip_updates.router)
 app.include_router(ors_route.router)
 app.include_router(ors_isochrone.router)
 app.include_router(ors_matrix.router)
+app.include_router(dropdown_data.router)
+app.include_router(dropdown_options.router)
 
 @app.get("/")
 def root():
