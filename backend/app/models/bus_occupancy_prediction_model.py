@@ -178,5 +178,7 @@ def append_feedback(feedback_row):
 
     df = pd.read_csv(feedback_file)
     if len(df) >= 100 and len(df) % 100 == 0:
-        print("Threshold reached. Retraining model with feedback included.")
-        train_models()
+        if os.getenv("RUN_RETRAINING") == "true":
+            print("Threshold reached. Retraining model with feedback included.")
+            train_models()
+

@@ -1,6 +1,6 @@
-Last trained: 2025-04-19 12:47:48
-Best Model: RandomForest
+Last trained: 2025-04-19 15:09:30
+Best Model: LogisticRegression
 Accuracy: 0.9303
-Precision: 0.8683
+Precision: 0.8654
 Recall: 0.9303
 F1 Score: 0.8966
