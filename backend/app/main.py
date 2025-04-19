@@ -13,6 +13,8 @@ from app.routes import ors_isochrone
 from app.routes import ors_matrix
 from app.routes import dropdown_data
 # from app.routes import dropdown_options
+from app.routes import crowd_prediction_router
+from app.routes import user_preferences
 
 
 app = FastAPI()
@@ -38,6 +40,8 @@ app.include_router(ors_isochrone.router)
 app.include_router(ors_matrix.router)
 app.include_router(dropdown_data.router)
 # app.include_router(dropdown_options.router)
+app.include_router(crowd_prediction_router.router)
+app.include_router(user_preferences.router)
 
 @app.get("/")
 def root():
