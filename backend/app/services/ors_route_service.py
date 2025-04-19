@@ -8,7 +8,13 @@ if not os.getenv("ORS_API_KEY"):
     env_path = Path(__file__).resolve().parents[2] / '.env'
     load_dotenv(dotenv_path=env_path)
 
-# Load API key
+# Load .env locally only (skip on Render)
+if not os.getenv("ORS_API_KEY"):
+    from dotenv import load_dotenv
+    env_path = Path(__file__).resolve().parents[2] / '.env'
+    load_dotenv(dotenv_path=env_path)
+
+# Load API key from environment
 ORS_API_KEY = os.getenv("ORS_API_KEY")
 
 def get_route_duration_and_distance(start_coords: list, end_coords: list):

@@ -8,9 +8,17 @@ router = APIRouter()
 
 @router.get("/live_buses")
 def get_live_bus_positions():
-    api_key = os.getenv("TFNSW_API_KEY")
+    # Load .env locally only (skip on Render)
+    if not os.getenv("TFNSW_API_KEY"):
+        from dotenv import load_dotenv
+        env_path = Path(__file__).resolve().parents[2] / '.env'
+        load_dotenv(dotenv_path=env_path)
+
+    # Load API key from environment
+    TFNSW_API_KEY = os.getenv("TFNSW_API_KEY")
+
     url = "https://api.transport.nsw.gov.au/v1/gtfs/vehiclepos/buses" 
-    headers = {"Authorization": f"apikey {api_key}"}
+    headers = {"Authorization": f"apikey {TFNSW_API_KEY}"}
 
     res = requests.get(url, headers=headers)
     if res.status_code != 200:

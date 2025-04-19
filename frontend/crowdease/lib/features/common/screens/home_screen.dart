@@ -8,6 +8,7 @@ import '../../bus/screens/live_bus_positions.dart';
 import '../../hub_overview/hub_overview_screen.dart';
 import '../../crowd_map_planner/crowd_map_and_planner_screen.dart';
 import '../../crowd_feedback/feedback_screen.dart';
+import 'package:crowdease/core/api_constants.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _startPollingForNewModel() {
     _pollingTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
-      final response = await http.get(Uri.parse("http://localhost:8000/check-new-model"));
+      final response = await http.get(Uri.parse("${ApiConstants.baseUrl}/check-new-model"));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data["new_model_available"] == true) {
@@ -55,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _manualCheckNewModel() async {
-    final response = await http.get(Uri.parse("http://localhost:8000/check-new-model"));
+    final response = await http.get(Uri.parse("${ApiConstants.baseUrl}/check-new-model"));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       if (data["new_model_available"] == true) {

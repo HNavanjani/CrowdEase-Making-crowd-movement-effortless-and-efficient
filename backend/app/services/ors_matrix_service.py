@@ -8,6 +8,7 @@ if not os.getenv("ORS_API_KEY"):
     env_path = Path(__file__).resolve().parents[2] / '.env'
     load_dotenv(dotenv_path=env_path)
 
+# Load API key from environment
 ORS_API_KEY = os.getenv("ORS_API_KEY")
 
 def get_matrix_durations_and_distances(coords: list, profile: str = "driving-car"):
