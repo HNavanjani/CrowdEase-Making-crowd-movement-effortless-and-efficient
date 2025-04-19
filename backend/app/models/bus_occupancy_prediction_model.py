@@ -106,6 +106,7 @@ def train_models():
             best_preds = y_pred
 
     joblib.dump(best_model, os.path.join(model_dir, "best_model.pkl"))
+    joblib.dump(X_train.columns.tolist(), os.path.join(model_dir, "feature_columns.pkl"))
     with open("new_model_flag.txt", "w") as f:
         f.write("new model ready")
 
@@ -140,10 +141,16 @@ def train_models():
 
 def predict(input_dict):
     model_path = os.path.join(model_dir, "best_model.pkl")
+    feature_path = os.path.join(model_dir, "feature_columns.pkl")
+
     if not os.path.exists(model_path):
         raise FileNotFoundError("No trained model found. Please train the model first.")
+    if not os.path.exists(feature_path):
+        raise FileNotFoundError("Feature columns file not found. Please retrain the model.")
 
     model = joblib.load(model_path)
+    feature_columns = joblib.load(feature_path)
+
     input_df = pd.DataFrame([input_dict])
     input_df.fillna("Unknown", inplace=True)
 
@@ -153,11 +160,12 @@ def predict(input_dict):
     input_df["ROUTE_ENCODED"] = le_route.transform(input_df["ROUTE"])
 
     input_df = pd.get_dummies(input_df)
-    X_all, _ = prepare_features(all_data)
-    input_df = input_df.reindex(columns=X_all.columns, fill_value=0)
+
+    input_df = input_df.reindex(columns=feature_columns, fill_value=0)
 
     prediction = model.predict(input_df)[0]
     return int(prediction)
+
 
 def append_feedback(feedback_row):
     columns = ["ROUTE", "TIMETABLE_HOUR_BAND", "TRIP_POINT", "TIMETABLE_TIME", "ACTUAL_TIME", "CAPACITY_BUCKET", "CAPACITY_BUCKET_ENCODED"]
