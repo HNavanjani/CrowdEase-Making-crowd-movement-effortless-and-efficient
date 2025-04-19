@@ -49,6 +49,19 @@ protobuf==3.20.3
 # Python wrapper for GTFS Realtime protobuf messages
 gtfs-realtime-bindings==0.0.7
 
+# Data science & ML
+pandas==2.2.2
+joblib==1.4.2
+scikit-learn==1.4.2
+xgboost==2.0.3
+matplotlib==3.8.4
+
+# Firebase integration
+firebase-admin==6.4.0
+
+# XML parsing
+xmltodict==0.13.0
+
 # ======================
 # End of Requirements
 # ======================
