@@ -4,6 +4,10 @@ import os, json
 router = APIRouter()
 data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../dropdown_data"))
 
+# Returns dropdown data from pre-generated JSON files located in the 'dropdown_data' folder.
+# The 'file_name' parameter should match the name of the file (without .json extension),
+# e.g., /dropdown/routes will load 'routes.json'.
+
 @router.get("/dropdown/{file_name}")
 def get_dropdown_data(file_name: str):
     try:
