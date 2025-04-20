@@ -1,86 +1,64 @@
-import os
-import pandas as pd
-import json
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import List
-from pathlib import Path
+import firebase_admin
+from firebase_admin import credentials, firestore
+import os
+import json
 
+# Detect if running on Render or locally
+if "FIREBASE_CREDENTIAL_JSON" in os.environ:
+    # On Render: Load from env
+    cred_dict = json.loads(os.environ["FIREBASE_CREDENTIAL_JSON"])
+    cred = credentials.Certificate(cred_dict)
+else:
+    # Local: Load from file
+    cred = credentials.Certificate("serviceAccountKey.json")
+print("Running on Render" if "FIREBASE_CREDENTIAL_JSON" in os.environ else "Running locally")
+firebase_admin.initialize_app(cred)
+db = firestore.client()
 router = APIRouter()
 
-# File paths
-PREFERENCES_FILE = Path("data/user_preferences.csv")
-ROUTES_JSON_PATH = Path("dropdown_data/routes.json")
+# Constants
+COLLECTION = "user_preferences"
 
-
-# Create data dir if missing
-PREFERENCES_FILE.parent.mkdir(parents=True, exist_ok=True)
-
-# Load valid route list
-with open(ROUTES_JSON_PATH, "r") as f:
-    route_data = json.load(f)
-VALID_ROUTES = set(route_data if isinstance(route_data[0], str) else [r["route"] for r in route_data])
-
-# Initialize CSV if missing
-if not PREFERENCES_FILE.exists():
-    pd.DataFrame(columns=["user_id", "favorite_routes", "regular_route"]).to_csv(PREFERENCES_FILE, index=False)
-
+# Model
 class Preference(BaseModel):
     user_id: str
     favorite_routes: List[str] = Field(max_items=5)
     regular_route: str
 
-def read_preferences():
-    return pd.read_csv(PREFERENCES_FILE)
-
-def save_preferences(df: pd.DataFrame):
-    df.to_csv(PREFERENCES_FILE, index=False)
-
-def validate_routes(favs: List[str], regular: str):
-    invalid = [r for r in favs + [regular] if r not in VALID_ROUTES]
-    if invalid:
-        raise HTTPException(status_code=400, detail=f"Invalid route(s): {invalid}")
-
+# POST (create)
 @router.post("/save-preferences")
-def save_user_preferences(pref: Preference):
-    validate_routes(pref.favorite_routes, pref.regular_route)
-    df = read_preferences()
-    if pref.user_id in df["user_id"].values:
+def save_preferences(pref: Preference):
+    doc_ref = db.collection(COLLECTION).document(pref.user_id)
+    if doc_ref.get().exists:
         raise HTTPException(status_code=400, detail="User already exists. Use PUT to update.")
-    df.loc[len(df)] = [pref.user_id, json.dumps(pref.favorite_routes), pref.regular_route]
-    save_preferences(df)
+    doc_ref.set(pref.dict())
     return {"message": "Preferences saved successfully"}
 
+# GET
 @router.get("/get-preferences/{user_id}")
-def get_user_preferences(user_id: str):
-    df = read_preferences()
-    user = df[df["user_id"] == user_id]
-    if user.empty:
+def get_preferences(user_id: str):
+    doc = db.collection(COLLECTION).document(user_id).get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="User not found")
-    row = user.iloc[0]
-    return {
-        "user_id": row["user_id"],
-        "favorite_routes": json.loads(row["favorite_routes"]),
-        "regular_route": row["regular_route"]
-    }
+    return doc.to_dict()
 
+# PUT (update)
 @router.put("/update-preferences")
-def update_user_preferences(pref: Preference):
-    validate_routes(pref.favorite_routes, pref.regular_route)
-    df = read_preferences()
-    if pref.user_id not in df["user_id"].values:
+def update_preferences(pref: Preference):
+    doc_ref = db.collection(COLLECTION).document(pref.user_id)
+    if not doc_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
-    idx = df[df["user_id"] == pref.user_id].index[0]
-    df.at[idx, "favorite_routes"] = json.dumps(pref.favorite_routes)
-    df.at[idx, "regular_route"] = pref.regular_route
-    save_preferences(df)
+    doc_ref.update(pref.dict())
     return {"message": "Preferences updated successfully"}
 
+# DELETE
 @router.delete("/remove-preferences/{user_id}")
-def delete_user_preferences(user_id: str):
-    df = read_preferences()
-    if user_id not in df["user_id"].values:
+def delete_preferences(user_id: str):
+    doc_ref = db.collection(COLLECTION).document(user_id)
+    if not doc_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
-    df = df[df["user_id"] != user_id]
-    save_preferences(df)
+    doc_ref.delete()
     return {"message": "Preferences deleted successfully"}
