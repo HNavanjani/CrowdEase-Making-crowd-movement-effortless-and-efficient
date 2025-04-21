@@ -71,8 +71,8 @@ def prepare_features(df):
 
 def train_models():
     df = load_all_data()
-    if len(df) > 10_000_000:
-        df = df.sample(n=10_000_000, random_state=42)
+    if len(df) > 100_000: #10_000_000
+        df = df.sample(n=100_000, random_state=42)
 
     X, y = prepare_features(df)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
