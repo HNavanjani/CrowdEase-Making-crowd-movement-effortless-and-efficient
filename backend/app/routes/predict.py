@@ -28,8 +28,8 @@ def trigger_training():
         train_models()
         return {"message": "Model trained and best model saved successfully."}
     except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        traceback.print_exc(file=sys.stdout)
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
 
 @router.post("/predict-crowd")
 def get_prediction(data: PredictionInput):
