@@ -11,6 +11,12 @@ from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 from sklearn.preprocessing import LabelEncoder
+from app.utils.setup_data import download_and_unzip_if_needed
+
+
+# Only auto-download if running on Render
+if os.getenv("RENDER") == "true":
+    download_and_unzip_if_needed()
 
 model_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "models"))
 data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "processed"))
