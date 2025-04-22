@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "584621606071-1h2bs3ouit8jtbqsir5dgmmv1n6aubg7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.crowdease",
+            "certificate_hash": "f0e4c180eb1811d162c5804c2bcfef296b69c29a"
+          }
+        },
+        {
           "client_id": "584621606071-22p2flct6e8ahumkg3k5bcd20qk9rr8j.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
