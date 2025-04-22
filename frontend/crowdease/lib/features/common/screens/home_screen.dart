@@ -8,7 +8,16 @@ import '../../bus/screens/live_bus_positions.dart';
 import '../../hub_overview/hub_overview_screen.dart';
 import '../../crowd_map_planner/crowd_map_and_planner_screen.dart';
 import '../../crowd_feedback/feedback_screen.dart';
+import '../../preferences/screens/user_preferences_screen.dart';
 import 'package:crowdease/core/api_constants.dart';
+import '../../settings/screens/settings_screen.dart';
+import '../../insights/screens/travel_history_screen.dart';
+import '../../alerts/screens/alerts_and_notifications.dart';
+import '../../personalized_suggestions/screens/personalize_suggestions_screen.dart';
+import '../../simulated_forecast/screens/simulated_forecast_screen.dart';
+import '../../route_performance/screens/route_performance_screen.dart';
+import '../../help_and_about/screens/help_and_about_screen.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,23 +30,47 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final user = FirebaseAuth.instance.currentUser;
   Timer? _pollingTimer;
-
-  final List<Widget> _screens = [
-    HubOverviewScreen(), // F1
-    const Center(child: Text('Alerts & Personalized Suggestions')),
-    CrowdMapAndPlannerScreen(), // F2
-    FeedbackScreen(), // Feedback
-  ];
+  bool _hasPreferences = false;
+  bool _checkingPrefs = true;
+  String? regularRoute;
+  List<String> favoriteRoutes = [];
 
   @override
   void initState() {
     super.initState();
     _startPollingForNewModel();
+    _checkUserPreferences();
+  }
+
+  void _checkUserPreferences() async {
+    print(ApiConstants.baseUrl);
+    final response = await http.get(
+      Uri.parse(
+        "${ApiConstants.baseUrl}/get-preferences/${user?.uid.toString()}",
+      ),
+    );
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        _hasPreferences = true;
+        _checkingPrefs = false;
+        regularRoute = data["regular_route"];
+        favoriteRoutes = List<String>.from(data["favorite_routes"]);
+      });
+      print(response);
+    } else {
+      setState(() {
+        _hasPreferences = false;
+        _checkingPrefs = false;
+      });
+    }
   }
 
   void _startPollingForNewModel() {
     _pollingTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
-      final response = await http.get(Uri.parse("${ApiConstants.baseUrl}/check-new-model"));
+      final response = await http.get(
+        Uri.parse("${ApiConstants.baseUrl}/check-new-model"),
+      );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data["new_model_available"] == true) {
@@ -56,7 +89,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _manualCheckNewModel() async {
-    final response = await http.get(Uri.parse("${ApiConstants.baseUrl}/check-new-model"));
+    final response = await http.get(
+      Uri.parse("${ApiConstants.baseUrl}/check-new-model"),
+    );
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       if (data["new_model_available"] == true) {
@@ -93,10 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
           value: 'profile',
           child: Text(user?.displayName ?? 'Profile'),
         ),
-        const PopupMenuItem(
-          value: 'logout',
-          child: Text("Logout"),
-        ),
+        const PopupMenuItem(value: 'logout', child: Text("Logout")),
       ],
     );
 
@@ -108,16 +140,68 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  List<Widget> _buildScreens() {
+    return [
+      _checkingPrefs
+          ? const Center(child: CircularProgressIndicator())
+          : _hasPreferences
+          ? HubOverviewScreen(
+            userId: FirebaseAuth.instance.currentUser?.uid ?? "default_user",
+            // regularRoute: regularRoute ?? "",
+            // favoriteRoutes: favoriteRoutes,
+          )
+          : Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  "You haven’t set your preferred routes yet.\nTap below to personalize your commute.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () async {
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //     builder: (_) => UserPreferencesScreen(userId: user?.uid ?? ''),
+                    //   ),
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (_) =>
+                                UserPreferencesScreen(userId: user?.uid ?? ''),
+                      ),
+                    );
+                    _checkUserPreferences();
+                    // setState(() {}); // rebuilds home
+                  },
+                  child: const Text("Set Preferences"),
+                ),
+              ],
+            ),
+          ),
+      const Center(child: Text('Alerts & Personalized Suggestions')),
+      CrowdMapAndPlannerScreen(),
+      FeedbackScreen(),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final screens = _buildScreens();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('CrowdEase'),
         leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
+          builder:
+              (context) => IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
         ),
         actions: [
           IconButton(
@@ -161,6 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
               title: const Text('Destinations (Hub Overview)'),
               onTap: () {
                 Navigator.pop(context);
+                _checkUserPreferences();
                 setState(() => _selectedIndex = 0);
               },
             ),
@@ -183,32 +268,100 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),
-              onTap: () {},
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.history),
               title: const Text('Travel History & Insights'),
-              onTap: () {},
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const TravelHistoryScreen(),
+                  ),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.notification_important),
               title: const Text('Alerts & Notifications'),
-              onTap: () => setState(() => _selectedIndex = 1),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AlertsAndNotificationsScreen(),
+                  ),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.lightbulb),
               title: const Text('Personalized Suggestions'),
-              onTap: () {},
+               onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PersonalizedSuggestionsScreen(),
+                  ),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.timeline),
               title: const Text('Simulated Forecast'),
-              onTap: () {},
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SimulatedForecastScreen(),
+                  ),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.analytics),
               title: const Text('Route Performance'),
-              onTap: () {},
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const RoutePerformanceScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.favorite),
+              title: const Text('Route Preferences'),
+              onTap: () async {
+                Navigator.pop(context);
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(
+                //     builder: (_) => UserPreferencesScreen(userId: user?.uid ?? ''),
+                //   ),
+                // );
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (_) => UserPreferencesScreen(userId: user?.uid ?? ''),
+                  ),
+                );
+                // setState(() {}); // rebuilds home
+                _checkUserPreferences();
+              },
             ),
             ListTile(
               leading: const Icon(Icons.directions_bus),
@@ -225,12 +378,18 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.info),
               title: const Text('Help / About'),
-              onTap: () {},
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HelpAboutScreen()),
+                );
+              },
             ),
           ],
         ),
       ),
-      body: _screens[_selectedIndex],
+      body: screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onBottomNavTap,
@@ -240,7 +399,10 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Alerts'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.feedback), label: 'Feedback'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.feedback),
+            label: 'Feedback',
+          ),
         ],
       ),
     );
