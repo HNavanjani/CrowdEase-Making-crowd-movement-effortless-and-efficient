@@ -11,13 +11,14 @@ def encode_capacity_bucket(value):
     }.get(value, -1)
 
 def clean_chunk(chunk):
-    # Replace bad/missing TRIP_POINT values
     chunk["TRIP_POINT"] = chunk.get("TRIP_POINT", "Unknown").fillna("Unknown").replace("N/A", "Unknown")
+    chunk["DIRECTION"] = chunk.get("DIRECTION", "Unknown").fillna("Unknown").replace("N/A", "Unknown")
+    chunk["SUBURB"] = chunk.get("SUBURB", "Unknown").fillna("Unknown").replace("N/A", "Unknown")
 
-    # Encode CAPACITY_BUCKET
+    # Encode capacity bucket
     chunk["CAPACITY_BUCKET_ENCODED"] = chunk["CAPACITY_BUCKET"].apply(encode_capacity_bucket)
 
-    # Skip parsing time to save memory, only drop missing columns
+    # Drop incomplete rows
     chunk.dropna(subset=["ROUTE", "CAPACITY_BUCKET", "TIMETABLE_HOUR_BAND"], inplace=True)
     chunk.drop_duplicates(inplace=True)
 
@@ -38,25 +39,22 @@ def clean_and_save_all():
         print(f"[{idx}/{total_files}] Processing {os.path.basename(file)}...")
 
         try:
-            # Output file path
             output_file = os.path.join(output_folder, os.path.basename(file))
-
-            # If the output file exists from previous runs, remove it
             if os.path.exists(output_file):
                 os.remove(output_file)
 
-            # Process in chunks
             chunk_iter = pd.read_csv(
                 file,
                 dtype=str,
                 chunksize=10000,
-                usecols=lambda col: col in ["ROUTE", "CAPACITY_BUCKET", "TRIP_POINT", "TIMETABLE_TIME", "ACTUAL_TIME", "TIMETABLE_HOUR_BAND"]
+                usecols=lambda col: col in [
+                    "CALENDAR_DATE", "ROUTE", "DIRECTION", "TRIP_POINT", "TIMETABLE_HOUR_BAND",
+                    "TIMETABLE_TIME", "ACTUAL_TIME", "SUBURB", "LATITUDE", "LONGITUDE", "CAPACITY_BUCKET"
+                ]
             )
 
             for chunk_num, chunk in enumerate(chunk_iter, 1):
                 cleaned = clean_chunk(chunk)
-
-                # Append mode, no header if not first chunk
                 cleaned.to_csv(output_file, mode='a', index=False, header=not os.path.exists(output_file))
                 print(f" - Chunk {chunk_num} cleaned and written.")
 

@@ -4,20 +4,29 @@ import '../../config.dart';
 
 class FeedbackDropdownService {
   static Future<List<String>> getRoutes() async {
-    final response = await http.get(Uri.parse('$baseUrl/available-routes'));
-    final data = jsonDecode(response.body);
-    return List<String>.from(data['routes']);
+    final response = await http.get(Uri.parse('$baseUrl/dropdown/routes'));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return List<String>.from(data); // no key like 'routes'
+    }
+    return [];
   }
 
   static Future<List<String>> getHourBands() async {
-    final response = await http.get(Uri.parse('$baseUrl/available-hour-bands'));
-    final data = jsonDecode(response.body);
-    return List<String>.from(data['hour_bands']);
+    final response = await http.get(Uri.parse('$baseUrl/dropdown/hour_bands'));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return List<String>.from(data);
+    }
+    return [];
   }
 
   static Future<List<String>> getTripPoints() async {
-    final response = await http.get(Uri.parse('$baseUrl/available-trip-points'));
-    final data = jsonDecode(response.body);
-    return List<String>.from(data['trip_points']);
+    final response = await http.get(Uri.parse('$baseUrl/dropdown/trip_points'));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return List<String>.from(data);
+    }
+    return [];
   }
 }

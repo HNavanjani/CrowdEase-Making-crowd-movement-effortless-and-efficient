@@ -1,32 +1,33 @@
 import os
 import zipfile
 import requests
+import shutil
 
-def download_and_unzip_if_needed():
-    # Set the target data directory to project root level /processed
+def download_and_unzip_force():
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     data_dir = os.path.join(base_dir, "processed")
+
+    # Remove processed folder if it exists
+    if os.path.exists(data_dir):
+        print("Deleting existing processed folder...")
+        shutil.rmtree(data_dir)
+
     os.makedirs(data_dir, exist_ok=True)
 
     zip_links = [
         (
-            "https://www.dropbox.com/scl/fi/l71i9y8x57idx87677rux/processed_part1.zip?rlkey=2hcrx73jslud8ltm57g8p6jkr&st=np3l4x6e&dl=1",
+            "https://www.dropbox.com/scl/fi/0hoofh8zshqnos4hq2959/processed_part1.zip?rlkey=s8whew84ybgj0o3qfa0t4jden&st=cyuit38z&dl=1",
             "processed_part1.zip"
         ),
         (
-            "https://www.dropbox.com/scl/fi/vdbtx1e233lwilz99k04c/processed_part2.zip?rlkey=7b6w4x89a0aqnmjl9j9v7vk8s&st=t9sj002u&dl=1",
+            "https://www.dropbox.com/scl/fi/495g6685yzvzf4ohhgiqn/processed_part2.zip?rlkey=0o3cy0rmng9g89z4vd3po83gl&st=emd7cnlp&dl=1",
             "processed_part2.zip"
         ),
         (
-            "https://www.dropbox.com/scl/fi/kzm26ihazvvrhpqmtfcyk/processed_part3.zip?rlkey=s0kx1gxgx62zlbdjabp0x5wu9&st=amnjgj6s&dl=1",
+            "https://www.dropbox.com/scl/fi/33q5slggs3q9vez52bcle/processed_part3.zip?rlkey=zlbq9j87g79u7uxp2df6sncpz&st=fro5sgzy&dl=1",
             "processed_part3.zip"
         ),
     ]
-
-    already_ready = any(f.endswith(".csv") for f in os.listdir(data_dir))
-    if already_ready:
-        print("Processed folder already ready.")
-        return
 
     for url, name in zip_links:
         zip_path = os.path.join(data_dir, name)
@@ -44,4 +45,4 @@ def download_and_unzip_if_needed():
 
         os.remove(zip_path)
 
-    print("All processed CSVs extracted to project root /processed folder.")
+    print("All processed CSVs freshly downloaded and extracted.")
