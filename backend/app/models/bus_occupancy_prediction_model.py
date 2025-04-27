@@ -4,6 +4,7 @@ import pandas as pd
 import joblib
 import datetime
 import matplotlib.pyplot as plt
+import time
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
@@ -91,10 +92,16 @@ def train_models():
     best_name = ""
     best_preds = None
     metrics = {}
+    train_times = {}
 
     for name, model in models.items():
+        start_time = time.time()  # Start timer
+        
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
+        
+        end_time = time.time()  # End timer
+        elapsed_time = end_time - start_time
 
         acc = accuracy_score(y_test, y_pred)
         prec = precision_score(y_test, y_pred, average="weighted", zero_division=0)
@@ -107,12 +114,31 @@ def train_models():
             "recall": rec,
             "f1": f1
         }
+        train_times[name] = elapsed_time  # Save training time
 
         if f1 > best_score:
             best_model = model
             best_score = f1
             best_name = name
             best_preds = y_pred
+
+    # save and print ALL model metrics after training
+    all_metrics_path = os.path.join(report_dir, "all_models_metrics.txt")
+    with open(all_metrics_path, "w") as f:
+        f.write(f"Model Comparison Report ({datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n")
+        f.write("="*60 + "\n\n")
+        for model_name in metrics.keys():
+            line = (f"Model: {model_name}\n"
+                    f"  Accuracy: {metrics[model_name]['accuracy']:.4f}\n"
+                    f"  Precision: {metrics[model_name]['precision']:.4f}\n"
+                    f"  Recall: {metrics[model_name]['recall']:.4f}\n"
+                    f"  F1 Score: {metrics[model_name]['f1']:.4f}\n"
+                    f"  Training Time: {train_times[model_name]:.2f} seconds\n"
+                    f"{'-'*60}\n")
+            print(line)  # Print to console
+            f.write(line)  # Save to file
+
+
 
     joblib.dump(best_model, os.path.join(model_dir, "best_model.pkl"))
     joblib.dump(X_train.columns.tolist(), os.path.join(model_dir, "feature_columns.pkl"))
