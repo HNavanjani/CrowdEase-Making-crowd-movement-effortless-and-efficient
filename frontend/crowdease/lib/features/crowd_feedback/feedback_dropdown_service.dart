@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../config.dart';
+import '../../models/route_data.dart';
 
 class FeedbackDropdownService {
-  static Future<List<String>> getRoutes() async {
+  static Future<List<RouteData>> getRoutes() async {
     final response = await http.get(Uri.parse('$baseUrl/dropdown/routes'));
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return List<String>.from(data); // no key like 'routes'
+      final List data = jsonDecode(response.body);
+      return data.map((json) => RouteData.fromJson(json)).toList();
     }
     return [];
   }

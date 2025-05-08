@@ -24,13 +24,14 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
   Map<String, String> predictions = {};
   String? regularRoute;
   List<String> favoriteRoutes = [];
+  Map<String, String> routeLabels = {}; // <-- Added
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     currentTime = _getCurrentTime();
-    _fetchUserPreferences();
+    _fetchRoutesAndPreferences();
   }
 
   String _getCurrentTime() {
@@ -38,19 +39,27 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
     return DateFormat('HH:mm').format(now);
   }
 
-  Future<void> _fetchUserPreferences() async {
+  Future<void> _fetchRoutesAndPreferences() async {
+    final routeRes = await http.get(Uri.parse("${ApiConstants.baseUrl}/dropdown/routes"));
+    if (routeRes.statusCode == 200) {
+      final routeList = json.decode(routeRes.body);
+      setState(() {
+        for (final route in routeList) {
+          routeLabels[route['route_id']] =
+              "${route['route_short_name']} – ${route['route_long_name']}";
+        }
+      });
+    }
+
     final response = await http.get(
       Uri.parse("${ApiConstants.baseUrl}/get-preferences/${widget.userId}"),
     );
-    print("****************");
-    print(widget.userId);
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       setState(() {
         regularRoute = data["regular_route"];
         favoriteRoutes = List<String>.from(data["favorite_routes"]);
-        print("✅ Loaded favorite routes from HomeScreen: $favoriteRoutes");
         isLoading = false;
       });
       _predictAllFavorites();
@@ -96,6 +105,8 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
       );
     }
 
+    final regularRouteLabel = routeLabels[regularRoute] ?? regularRoute ?? "Not selected";
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: SingleChildScrollView(
@@ -112,7 +123,7 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
                   'Welcome, $userName!',
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-                subtitle: Text('Your regular route is: Route ${regularRoute ?? "Not selected"}'),
+                subtitle: Text('Your regular route is: Route $regularRouteLabel'),
               ),
             ),
             const SizedBox(height: 20),
@@ -145,10 +156,11 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
             else
               ...favoriteRoutes.map((routeId) {
                 final prediction = predictions[routeId] ?? "Loading...";
+                final label = routeLabels[routeId] ?? routeId;
                 return Card(
                   child: ListTile(
                     leading: const Icon(Icons.directions_bus, color: Colors.indigo),
-                    title: Text("Route $routeId"),
+                    title: Text("Route $label"),
                     subtitle: Text("Crowd Prediction: $prediction (Checked at $currentTime)"),
                   ),
                 );
