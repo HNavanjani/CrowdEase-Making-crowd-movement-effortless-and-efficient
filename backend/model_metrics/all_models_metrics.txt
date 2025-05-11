@@ -1,24 +1,24 @@
-Model Comparison Report (2025-04-27 09:53:42)
+Model Comparison Report (2025-05-11 19:15:37)
 ============================================================
 
 Model: LogisticRegression
-  Accuracy: 0.9385
-  Precision: 0.8808
-  Recall: 0.9385
-  F1 Score: 0.9087
-  Training Time: 213.50 seconds
+  Accuracy: 0.9388
+  Precision: 0.8814
+  Recall: 0.9388
+  F1 Score: 0.9092
+  Training Time: 2369.00 seconds
 ------------------------------------------------------------
 Model: RandomForest
-  Accuracy: 0.9385
-  Precision: 0.8808
-  Recall: 0.9385
-  F1 Score: 0.9087
-  Training Time: 37.01 seconds
+  Accuracy: 0.9388
+  Precision: 0.8814
+  Recall: 0.9388
+  F1 Score: 0.9092
+  Training Time: 458.52 seconds
 ------------------------------------------------------------
 Model: XGBoost
-  Accuracy: 0.9385
-  Precision: 0.8808
-  Recall: 0.9385
-  F1 Score: 0.9087
-  Training Time: 19.30 seconds
+  Accuracy: 0.9388
+  Precision: 0.8814
+  Recall: 0.9388
+  F1 Score: 0.9092
+  Training Time: 374.30 seconds
 ------------------------------------------------------------

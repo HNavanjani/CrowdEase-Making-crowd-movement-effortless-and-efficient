@@ -24,7 +24,7 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
   Map<String, String> predictions = {};
   String? regularRoute;
   List<String> favoriteRoutes = [];
-  Map<String, String> routeLabels = {}; // <-- Added
+  Map<String, String> routeLabels = {};
   bool isLoading = true;
 
   @override
@@ -39,8 +39,34 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
     return DateFormat('HH:mm').format(now);
   }
 
+  String _getHourBand(String time) {
+    final hour = int.tryParse(time.split(':')[0]) ?? 0;
+    if (hour >= 7 && hour < 9) return "07:00-09:00";
+    if (hour >= 9 && hour < 12) return "09:00-12:00";
+    if (hour >= 12 && hour < 15) return "12:00-15:00";
+    if (hour >= 15 && hour < 18) return "15:00-18:00";
+    return "Other";
+  }
+
+  String _mapPredictionLabel(String code) {
+    switch (code) {
+      case "0":
+        return "Low";
+      case "1":
+        return "Medium";
+      case "2":
+        return "High";
+      case "3":
+        return "Full";
+      default:
+        return "Unavailable";
+    }
+  }
+
   Future<void> _fetchRoutesAndPreferences() async {
     final routeRes = await http.get(Uri.parse("${ApiConstants.baseUrl}/dropdown/routes"));
+    List<String> rawFavorites = [];
+
     if (routeRes.statusCode == 200) {
       final routeList = json.decode(routeRes.body);
       setState(() {
@@ -57,11 +83,15 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      setState(() {
-        regularRoute = data["regular_route"];
-        favoriteRoutes = List<String>.from(data["favorite_routes"]);
-        isLoading = false;
-      });
+      regularRoute = data["regular_route"];
+      rawFavorites = List<String>.from(data["favorite_routes"]);
+
+      // Map short IDs like "888" to full route_id like "12-888-sj2-1"
+      favoriteRoutes = routeLabels.keys
+          .where((fullId) => rawFavorites.any((shortId) => fullId.contains(shortId)))
+          .toList();
+
+      setState(() => isLoading = false);
       _predictAllFavorites();
     } else {
       setState(() => isLoading = false);
@@ -70,23 +100,36 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
 
   Future<void> _predictAllFavorites() async {
     for (String route in favoriteRoutes) {
-      final response = await http.post(
-        Uri.parse("${ApiConstants.baseUrl}/predict-crowd"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "ROUTE": route,
-          "TIMETABLE_HOUR_BAND": "07:00-09:00",
-          "TRIP_POINT": "Start",
-          "TIMETABLE_TIME": currentTime,
-          "ACTUAL_TIME": currentTime,
-        }),
-      );
+      final hourBand = _getHourBand(currentTime);
+      try {
+        final response = await http.post(
+          Uri.parse("${ApiConstants.baseUrl}/predict-crowd"),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({
+            "ROUTE": route,
+            "TIMETABLE_HOUR_BAND": hourBand,
+            "TRIP_POINT": "Start",
+            "TIMETABLE_TIME": currentTime,
+            "ACTUAL_TIME": currentTime,
+          }),
+        );
 
-      if (response.statusCode == 200) {
-        setState(() {
-          predictions[route] = json.decode(response.body);
-        });
-      } else {
+        print("Route $route => ${response.statusCode} | ${response.body}");
+
+        if (response.statusCode == 200) {
+          final decoded = json.decode(response.body);
+          final predictionCode = decoded["predicted_capacity_bucket_encoded"]?.toString();
+          final label = _mapPredictionLabel(predictionCode ?? "");
+          setState(() {
+            predictions[route] = label;
+          });
+        } else {
+          setState(() {
+            predictions[route] = "Unavailable";
+          });
+        }
+      } catch (e) {
+        print("Error predicting for $route: $e");
         setState(() {
           predictions[route] = "Unavailable";
         });
@@ -105,7 +148,13 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
       );
     }
 
-    final regularRouteLabel = routeLabels[regularRoute] ?? regularRoute ?? "Not selected";
+    final regularRouteFullId = routeLabels.keys.firstWhere(
+      (key) => key.contains(regularRoute ?? ''),
+      orElse: () => regularRoute ?? '',
+    );
+
+    final regularRouteLabel =
+        routeLabels[regularRouteFullId] ?? regularRouteFullId;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -118,7 +167,7 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
               color: Colors.indigo.shade50,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: ListTile(
-                leading: Icon(Icons.person_pin, color: Colors.indigo, size: 36),
+                leading: const Icon(Icons.person_pin, color: Colors.indigo, size: 36),
                 title: Text(
                   'Welcome, $userName!',
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
