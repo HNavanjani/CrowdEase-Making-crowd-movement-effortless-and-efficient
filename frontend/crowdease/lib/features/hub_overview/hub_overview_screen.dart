@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:crowdease/features/crowd_map_planner/crowd_map_and_planner_screen.dart';
-import 'package:crowdease/core/api_constants.dart';
+import '../../core/http_helper.dart';
 
 class HubOverviewScreen extends StatefulWidget {
   final String userId;
@@ -64,11 +62,10 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
   }
 
   Future<void> _fetchRoutesAndPreferences() async {
-    final routeRes = await http.get(Uri.parse("${ApiConstants.baseUrl}/dropdown/routes"));
+    final routeList = await HttpHelper.get("/dropdown/routes");
     List<String> rawFavorites = [];
 
-    if (routeRes.statusCode == 200) {
-      final routeList = json.decode(routeRes.body);
+    if (routeList != null) {
       setState(() {
         for (final route in routeList) {
           routeLabels[route['route_id']] =
@@ -77,18 +74,15 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
       });
     }
 
-    final response = await http.get(
-      Uri.parse("${ApiConstants.baseUrl}/get-preferences/${widget.userId}"),
-    );
+    final data = await HttpHelper.get("/get-preferences/${widget.userId}");
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+    if (data != null) {
       regularRoute = data["regular_route"];
       rawFavorites = List<String>.from(data["favorite_routes"]);
 
-      // Map short IDs like "888" to full route_id like "12-888-sj2-1"
       favoriteRoutes = routeLabels.keys
-          .where((fullId) => rawFavorites.any((shortId) => fullId.contains(shortId)))
+          .where((fullId) =>
+              rawFavorites.any((shortId) => fullId.contains(shortId)))
           .toList();
 
       setState(() => isLoading = false);
@@ -101,35 +95,23 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
   Future<void> _predictAllFavorites() async {
     for (String route in favoriteRoutes) {
       final hourBand = _getHourBand(currentTime);
-      try {
-        final response = await http.post(
-          Uri.parse("${ApiConstants.baseUrl}/predict-crowd"),
-          headers: {"Content-Type": "application/json"},
-          body: jsonEncode({
-            "ROUTE": route,
-            "TIMETABLE_HOUR_BAND": hourBand,
-            "TRIP_POINT": "Start",
-            "TIMETABLE_TIME": currentTime,
-            "ACTUAL_TIME": currentTime,
-          }),
-        );
 
-        print("Route $route => ${response.statusCode} | ${response.body}");
+      final predictionData = await HttpHelper.post("/predict-crowd", {
+        "ROUTE": route,
+        "TIMETABLE_HOUR_BAND": hourBand,
+        "TRIP_POINT": "Start",
+        "TIMETABLE_TIME": currentTime,
+        "ACTUAL_TIME": currentTime,
+      });
 
-        if (response.statusCode == 200) {
-          final decoded = json.decode(response.body);
-          final predictionCode = decoded["predicted_capacity_bucket_encoded"]?.toString();
-          final label = _mapPredictionLabel(predictionCode ?? "");
-          setState(() {
-            predictions[route] = label;
-          });
-        } else {
-          setState(() {
-            predictions[route] = "Unavailable";
-          });
-        }
-      } catch (e) {
-        print("Error predicting for $route: $e");
+      if (predictionData != null) {
+        final predictionCode =
+            predictionData["predicted_capacity_bucket_encoded"]?.toString();
+        final label = _mapPredictionLabel(predictionCode ?? "");
+        setState(() {
+          predictions[route] = label;
+        });
+      } else {
         setState(() {
           predictions[route] = "Unavailable";
         });
@@ -140,7 +122,7 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
   @override
   Widget build(BuildContext context) {
     final userName = user?.displayName ?? "Commuter";
-    final suggestion = "Avoid peak time routes between 5 PM – 6 PM for a better commute.";
+    final suggestion = "Check predictions before you leave to avoid unexpected crowding. Travel 10 minutes earlier to beat the rush!";
 
     if (isLoading) {
       return const Scaffold(

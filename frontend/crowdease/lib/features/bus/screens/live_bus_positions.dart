@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../data/services/api_service.dart';
+import '../../../core/http_helper.dart';
 
 class LiveBusPositions extends StatefulWidget {
   const LiveBusPositions({super.key});
@@ -14,110 +14,119 @@ class LiveBusPositions extends StatefulWidget {
 }
 
 class _LiveBusPositionsState extends State<LiveBusPositions> {
-  List<Map<String, dynamic>> allBuses = [];
-  List<Map<String, dynamic>> filteredBuses = [];
-  Map<String, int> simulatedLoad = {};
-  Timer? refreshTimer;
-  bool isLoading = true;
-  String? error;
-  DateTime? lastFetched;
-
-  String? selectedRoute;
   final user = FirebaseAuth.instance.currentUser;
 
-  @override
-  void initState() {
-    super.initState();
-    fetchBuses();
-    refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => fetchBuses());
-  }
+  List<Map<String, dynamic>> allBuses = [];
+  List<Map<String, dynamic>> filteredBuses = [];
+  Map<String, String> crowdPredictions = {};
 
-  @override
-  void dispose() {
-    refreshTimer?.cancel();
-    super.dispose();
-  }
+  bool isLoading = false;
+  bool showResults = false;
+  String? error;
+  String searchText = "";
+  DateTime? lastFetched;
 
   Future<void> fetchBuses() async {
+    setState(() {
+      isLoading = true;
+      error = null;
+      showResults = false;
+      crowdPredictions.clear();
+    });
+
     try {
+      final data = await HttpHelper.get("/getBusPositions");
+
+      if (data == null || data['buses'] == null) {
+        setState(() {
+          error = "Failed to fetch live buses.";
+          isLoading = false;
+        });
+        return;
+      }
+
+      allBuses = List<Map<String, dynamic>>.from(data['buses']);
+      applySearchFilter();
+
+      for (var bus in filteredBuses) {
+        await predictCrowdForBus(bus);
+      }
+
       setState(() {
-        isLoading = true;
-        error = null;
-      });
-
-      final rawData = await ApiService.getBusPositions();
-      final filtered = rawData.where((bus) {
-        final lat = bus['lat'] ?? 0.0;
-        final lon = bus['lon'] ?? 0.0;
-        return lat > -34.2 && lat < -33.5 && lon > 150.5 && lon < 151.5;
-      }).toList();
-
-      final rng = Random();
-      simulatedLoad = {
-        for (var bus in filtered) bus['label'] ?? '': rng.nextInt(20),
-      };
-
-      setState(() {
-        allBuses = filtered;
-        applyRouteFilter();
-        isLoading = false;
         lastFetched = DateTime.now();
+        showResults = true;
+        isLoading = false;
       });
     } catch (e) {
       setState(() {
-        error = e.toString();
+        error = "Error: ${e.toString()}";
         isLoading = false;
       });
     }
   }
 
-  void applyRouteFilter() {
-    if (selectedRoute == null || selectedRoute == 'All') {
-      filteredBuses = allBuses;
-    } else {
-      filteredBuses = allBuses.where((bus) {
-        return getRouteFromTripId(bus["trip_id"]) == selectedRoute;
-      }).toList();
+  Future<void> predictCrowdForBus(Map<String, dynamic> bus) async {
+    final now = DateTime.now();
+    final hour = now.hour;
+
+    String hourBand;
+    if (hour >= 7 && hour < 9) hourBand = "07:00-09:00";
+    else if (hour >= 9 && hour < 12) hourBand = "09:00-12:00";
+    else if (hour >= 12 && hour < 15) hourBand = "12:00-15:00";
+    else if (hour >= 15 && hour < 18) hourBand = "15:00-18:00";
+    else hourBand = "Other";
+
+    final payload = {
+      "ROUTE": bus["trip_id"] ?? "",
+      "TIMETABLE_HOUR_BAND": hourBand,
+      "TRIP_POINT": "Start",
+      "TIMETABLE_TIME": DateFormat.Hm().format(now),
+      "ACTUAL_TIME": DateFormat.Hm().format(now),
+    };
+
+    final response = await HttpHelper.post("/predict-crowd", payload);
+    final label = bus['label'] ?? '';
+
+    setState(() {
+      crowdPredictions[label] = response != null &&
+              response["predicted_capacity_bucket_encoded"] != null
+          ? _mapPredictionLabel(
+              response["predicted_capacity_bucket_encoded"].toString())
+          : "Unavailable";
+    });
+  }
+
+  String _mapPredictionLabel(String code) {
+    switch (code) {
+      case "0":
+        return "Low";
+      case "1":
+        return "Medium";
+      case "2":
+        return "High";
+      case "3":
+        return "Full";
+      default:
+        return "Unavailable";
     }
   }
 
-  Color getColorForLoad(int load) {
-    if (load >= 15) return Colors.red;
-    if (load >= 8) return Colors.orange;
-    return Colors.green;
-  }
-
-  String getDirectionText(num? bearing) {
-    if (bearing == null) return "–";
-    final angle = bearing % 360;
-    if (angle >= 337.5 || angle < 22.5) return "North";
-    if (angle >= 22.5 && angle < 67.5) return "North-East";
-    if (angle >= 67.5 && angle < 112.5) return "East";
-    if (angle >= 112.5 && angle < 157.5) return "South-East";
-    if (angle >= 157.5 && angle < 202.5) return "South";
-    if (angle >= 202.5 && angle < 247.5) return "South-West";
-    if (angle >= 247.5 && angle < 292.5) return "West";
-    return "North-West";
-  }
-
-  String getRouteFromTripId(String? tripId) {
-    if (tripId == null || !tripId.contains('-')) return "–";
-    final parts = tripId.split('-');
-    return parts.length > 1 ? parts[1] : tripId;
+  void applySearchFilter() {
+    if (searchText.isEmpty) {
+      filteredBuses = [];
+    } else {
+      filteredBuses = allBuses
+          .where((bus) =>
+              bus["route_long"]?.toString().toLowerCase().contains(searchText.toLowerCase()) ??
+              false)
+          .toList();
+    }
   }
 
   String getFreshness() {
     if (lastFetched == null) return "Unknown";
     final diff = DateTime.now().difference(lastFetched!).inSeconds;
-    if (diff < 60) return "$diff seconds ago";
-    final mins = (diff / 60).round();
-    return "$mins minute${mins > 1 ? 's' : ''} ago";
-  }
-
-  List<String> getAvailableRoutes() {
-    final routes = allBuses.map((b) => getRouteFromTripId(b["trip_id"])).toSet().toList();
-    routes.sort();
-    return ['All', ...routes];
+    return diff < 60 ? "$diff seconds ago" : "${(diff ~/ 60)} min ago";
   }
 
   @override
@@ -125,160 +134,126 @@ class _LiveBusPositionsState extends State<LiveBusPositions> {
     final userName = user?.displayName ?? "Commuter";
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text('Live Bus Positions'),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: fetchBuses)
+          IconButton(onPressed: fetchBuses, icon: const Icon(Icons.refresh))
         ],
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('Couldn’t load live bus data.\n$error',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.indigo.shade700, fontSize: 16)),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text('Hi, $userName!',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            TextField(
+              decoration: const InputDecoration(
+                labelText: "Search by Destination or Route",
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) {
+                searchText = value;
+                setState(() {}); // For enabling/disabling button
+              },
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: searchText.trim().isEmpty ? null : fetchBuses,
+                icon: const Icon(Icons.search),
+                label: const Text("Search Buses"),
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (isLoading) const CircularProgressIndicator(),
+
+            if (error != null) ...[
+              Text(error!, style: const TextStyle(color: Colors.red)),
+              const SizedBox(height: 10),
+            ],
+
+            if (!showResults && !isLoading)
+              const Expanded(
+                child: Center(
+                  child: Text(
+                    "Enter a destination or route name above to find live buses with predictions.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
                   ),
-                )
-              : Column(
+                ),
+              ),
+
+            if (showResults) ...[
+              Text("${filteredBuses.length} buses found | Last updated: ${getFreshness()}",
+                  style: const TextStyle(fontSize: 14)),
+              const SizedBox(height: 8),
+              Expanded(
+                flex: 2,
+                child: FlutterMap(
+                  options: MapOptions(
+                    center: filteredBuses.isNotEmpty
+                        ? LatLng(filteredBuses[0]['lat'], filteredBuses[0]['lon'])
+                        : LatLng(-33.87, 151.21),
+                    zoom: 12.5,
+                  ),
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Hello, $userName!',
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<String>(
-                            decoration: const InputDecoration(
-                              labelText: "Filter by Route",
-                              border: OutlineInputBorder(),
-                            ),
-                            value: selectedRoute ?? 'All',
-                            items: getAvailableRoutes()
-                                .map((route) => DropdownMenuItem(
-                                    value: route, child: Text(route)))
-                                .toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                selectedRoute = value;
-                                applyRouteFilter();
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "${filteredBuses.length} active buses | Last updated: ${getFreshness()}",
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ],
-                      ),
+                    TileLayer(
+                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.example.crowdease',
                     ),
+                    MarkerLayer(
+                      markers: filteredBuses.map((bus) {
+                        final lat = bus['lat'];
+                        final lon = bus['lon'];
+                        final label = bus['label'] ?? '';
+                        final prediction = crowdPredictions[label] ?? '...';
 
-                    // MAP with colored markers
-                    Expanded(
-                      child: FlutterMap(
-                        options: MapOptions(
-                          center: filteredBuses.isNotEmpty
-                              ? LatLng(filteredBuses[0]['lat'], filteredBuses[0]['lon'])
-                              : LatLng(-33.87, 151.21),
-                          zoom: 12.5,
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.example.crowdease',
+                        return Marker(
+                          point: LatLng(lat, lon),
+                          width: 40,
+                          height: 40,
+                          child: Tooltip(
+                            message: "Bus $label\nCrowd: $prediction",
+                            child: Icon(Icons.directions_bus_filled, size: 30, color: Colors.indigo),
                           ),
-                          MarkerLayer(
-                            markers: filteredBuses.map((bus) {
-                              final label = bus['label'] ?? '';
-                              final load = simulatedLoad[label] ?? 0;
-                              final color = getColorForLoad(load);
-
-                              return Marker(
-                                point: LatLng(bus['lat'], bus['lon']),
-                                width: 40,
-                                height: 40,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (_) => AlertDialog(
-                                        title: Text('Bus $label'),
-                                        content: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Route: ${getRouteFromTripId(bus["trip_id"])}'),
-                                            Text('Heading: ${getDirectionText(bus["bearing"])}'),
-                                            Text('Last Updated: ${bus["last_updated"] ?? "–"}'),
-                                            Text('Simulated Load: $load'),
-                                          ],
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(context),
-                                            child: Text('Close', style: TextStyle(color: Colors.indigo)),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  child: Icon(Icons.directions_bus_filled, size: 30, color: color),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const Divider(),
-
-                    // List View of Buses
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: filteredBuses.length,
-                        itemBuilder: (context, index) {
-                          final bus = filteredBuses[index];
-                          final label = bus['label'] ?? '';
-                          final load = simulatedLoad[label] ?? 0;
-                          final color = getColorForLoad(load);
-
-                          return Card(
-                            elevation: 3,
-                            color: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(color: color, width: 2),
-                            ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: color.withOpacity(0.2),
-                                child: const Icon(Icons.directions_bus_filled, color: Colors.indigo),
-                              ),
-                              title: Text('Bus $label'),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Route: ${getRouteFromTripId(bus["trip_id"])}'),
-                                  Text('Heading: ${getDirectionText(bus["bearing"])}'),
-                                  Text('Last Updated: ${bus["last_updated"] ?? "–"}'),
-                                  Text('Simulated Load: $load passengers'),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                        );
+                      }).toList(),
                     ),
                   ],
                 ),
+              ),
+              const Divider(),
+              Expanded(
+                flex: 2,
+                child: ListView.builder(
+                  itemCount: filteredBuses.length,
+                  itemBuilder: (context, index) {
+                    final bus = filteredBuses[index];
+                    final label = bus['label'] ?? '';
+                    final prediction = crowdPredictions[label] ?? '...';
+
+                    return Card(
+                      elevation: 2,
+                      child: ListTile(
+                        leading: const Icon(Icons.directions_bus, color: Colors.indigo),
+                        title: Text(
+                          "Route ${bus['route_short'] ?? ''} – ${bus['route_long'] ?? ''}",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text("Crowd: $prediction | Updated: ${bus['last_updated']}"),
+                      ),
+                    );
+                  },
+                ),
+              )
+            ]
+          ],
+        ),
+      ),
     );
   }
 }
