@@ -3,6 +3,7 @@ import zipfile
 import requests
 import pandas as pd
 from pathlib import Path
+import shutil
 
 def download_and_extract_gtfs():
     data_path = Path(__file__).resolve().parents[2] / "gtfs_data"
@@ -25,13 +26,21 @@ def download_and_extract_gtfs():
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(data_path)
 
-        print("GTFS static data ready.")
-        extracted_files = os.listdir(data_path)
-        print("Extracted GTFS files:", extracted_files)
-        if 'routes.txt' not in extracted_files or 'trips.txt' not in extracted_files:
-            raise FileNotFoundError("routes.txt or trips.txt not found after extraction")
+        # Check for nested folder and move contents up
+        inner_folders = [f for f in data_path.iterdir() if f.is_dir()]
+        for folder in inner_folders:
+            for item in folder.iterdir():
+                shutil.move(str(item), str(data_path))
+            shutil.rmtree(folder)
 
-#  Auto-trigger on Render only
+        print("GTFS static data ready.")
+
+    extracted_files = os.listdir(data_path)
+    print("Extracted GTFS files:", extracted_files)
+    if 'routes.txt' not in extracted_files or 'trips.txt' not in extracted_files:
+        raise FileNotFoundError("routes.txt or trips.txt not found after extraction")
+
+# 🔁 Auto-trigger on Render only
 if os.getenv("RENDER") == "true":
     download_and_extract_gtfs()
 
