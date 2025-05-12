@@ -5,6 +5,10 @@ from pathlib import Path
 from datetime import datetime
 from app.utils.gtfs_static_loader import load_trip_route_map
 
+# Lazy loading function for trip_route_map
+def get_trip_route_map():
+    return load_trip_route_map()
+
 # Load .env locally only (skip on Render)
 if not os.getenv("TFNSW_API_KEY"):
     from dotenv import load_dotenv
@@ -12,9 +16,6 @@ if not os.getenv("TFNSW_API_KEY"):
     load_dotenv(dotenv_path=env_path)
 
 TFNSW_API_KEY = os.getenv("TFNSW_API_KEY")
-
-# Load GTFS trip_id to route info mapping once
-trip_route_map = load_trip_route_map()
 
 def get_bus_positions():
     if not TFNSW_API_KEY:
@@ -32,6 +33,8 @@ def get_bus_positions():
         feed.ParseFromString(response.content)
 
         buses = []
+        trip_route_map = get_trip_route_map()
+
         for entity in feed.entity:
             if entity.HasField("vehicle"):
                 v = entity.vehicle
