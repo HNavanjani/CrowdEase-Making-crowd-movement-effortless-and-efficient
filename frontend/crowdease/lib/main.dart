@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 
 import 'features/common/screens/splash_screen.dart';
 import 'features/common/screens/home_screen.dart';
 import 'features/auth/screens/login_screen.dart';
+import 'features/settings/theme_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +23,11 @@ void main() async {
     debugPrint('Firebase initialization error: $e');
   }
 
+  // Load dark mode preference before runApp
+  final prefs = await SharedPreferences.getInstance();
+  final isDark = prefs.getBool('dark_mode') ?? false;
+  ThemeController.themeNotifier.value = isDark ? ThemeMode.dark : ThemeMode.light;
+
   runApp(const MyApp());
 }
 
@@ -29,14 +36,21 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'CrowdEase',
-      theme: ThemeData(primarySwatch: Colors.indigo),
-      debugShowCheckedModeBanner: false,
-      home: const SplashScreen(),
-      routes: {
-        '/home': (context) => const HomeScreen(),
-        '/login': (context) => const LoginScreen(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeController.themeNotifier,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'CrowdEase',
+          theme: ThemeData.light(),
+          darkTheme: ThemeData.dark(),
+          themeMode: mode,
+          debugShowCheckedModeBanner: false,
+          home: const SplashScreen(),
+          routes: {
+            '/home': (context) => const HomeScreen(),
+            '/login': (context) => const LoginScreen(),
+          },
+        );
       },
     );
   }
