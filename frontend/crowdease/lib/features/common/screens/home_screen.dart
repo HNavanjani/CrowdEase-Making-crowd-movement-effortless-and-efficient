@@ -155,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-      const Center(child: Text('Alerts & Personalized Suggestions')),
+     const AlertsAndNotificationsScreen(),
       CrowdMapAndPlannerScreen(),
       FeedbackScreen(),
     ];
