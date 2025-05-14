@@ -1,14 +1,23 @@
 import os
 import glob
 import pandas as pd
+import json
 from pathlib import Path
 
-# Path to 'processed' folder (adjusted to your structure)
-data_dir = Path(__file__).resolve().parents[3] / "processed"
+# Paths
+base_dir = Path(__file__).resolve().parents[3]
+data_dir = base_dir / "processed"
+cache_file = base_dir / "insight_outputs" / "forecast_weekly.json"
+os.makedirs(cache_file.parent, exist_ok=True)
 
 def get_weekly_forecast():
-    print(f"[INFO] Looking for CSVs in: {data_dir}")
+    #  If cached output exists, load and return it
+    if cache_file.exists():
+        print(f"[CACHE] Returning saved forecast from {cache_file}")
+        with open(cache_file, "r") as f:
+            return json.load(f)
 
+    print(f"[INFO] Looking for CSVs in: {data_dir}")
     all_files = sorted(glob.glob(str(data_dir / "*.csv")))
     print(f"[INFO] Found {len(all_files)} files")
 
@@ -32,16 +41,14 @@ def get_weekly_forecast():
 
     df = pd.concat(df_list, ignore_index=True)
     print(f"[INFO] Total rows combined from all files: {total_rows}")
-    print(df.head(3))  # Preview first few rows
+    print(df.head(3))
 
-    # Parse CALENDAR_DATE like '21/NOV/16'
     df['CALENDAR_DATE'] = pd.to_datetime(df['CALENDAR_DATE'], format='%d/%b/%y', errors='coerce')
     df['CAPACITY_BUCKET_ENCODED'] = pd.to_numeric(df['CAPACITY_BUCKET_ENCODED'], errors='coerce')
 
     before_drop = len(df)
     df = df.dropna(subset=["CALENDAR_DATE", "CAPACITY_BUCKET_ENCODED"])
-    dropped = before_drop - len(df)
-    print(f"[INFO] Dropped {dropped} rows with missing or invalid data")
+    print(f"[INFO] Dropped {before_drop - len(df)} rows with missing/invalid data")
 
     if df.empty:
         print("[WARN] All rows dropped after cleaning — no valid data")
@@ -63,5 +70,11 @@ def get_weekly_forecast():
         .to_dict()
     )
 
+    result = {"weekly_forecast": weekday_avg}
     print(f"[INFO] Weekly forecast: {weekday_avg}")
-    return {"weekly_forecast": weekday_avg}
+
+    #  Save forecast for reuse
+    with open(cache_file, "w") as f:
+        json.dump(result, f)
+
+    return result
