@@ -16,7 +16,7 @@ from app.routes import dropdown_data
 from app.routes import crowd_prediction_router
 from app.routes import user_preferences
 from app.routes import travel_history_routes
-
+from app.routes import alerts_router
 
 app = FastAPI()
 
@@ -44,6 +44,7 @@ app.include_router(dropdown_data.router)
 app.include_router(crowd_prediction_router.router)
 app.include_router(user_preferences.router)
 app.include_router(travel_history_routes.router)
+app.include_router(alerts_router.router)
 
 @app.get("/")
 def root():
