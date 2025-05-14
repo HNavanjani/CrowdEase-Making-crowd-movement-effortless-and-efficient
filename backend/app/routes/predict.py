@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import traceback
 from app.models.bus_occupancy_prediction_model import train_models, predict, append_feedback, model_dir
 import os
+from pathlib import Path
 
 router = APIRouter()
 
@@ -54,6 +55,7 @@ def check_new_model():
     try:
         model_path = os.path.join(model_dir, "best_model.pkl")
         model_time = os.path.getmtime(model_path)
+        feedback_file = Path(__file__).resolve().parents[2] / "feedback.csv"
         threshold_time = os.path.getmtime(feedback_file) if os.path.exists(feedback_file) else 0
         if threshold_time > model_time:
             return {"new_model_available": True}
