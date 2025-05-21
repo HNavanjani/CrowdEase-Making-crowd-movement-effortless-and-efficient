@@ -254,8 +254,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const TravelHistoryScreen()),
-                  // MaterialPageRoute(builder: (_) => TravelHistoryScreen(userId: user?.uid ?? ''),),
+                  // MaterialPageRoute(builder: (_) => const TravelHistoryScreen()),
+                  MaterialPageRoute(builder: (_) => TravelHistoryScreen(userId: user?.uid ?? ''),),
                 );
               },
             ),

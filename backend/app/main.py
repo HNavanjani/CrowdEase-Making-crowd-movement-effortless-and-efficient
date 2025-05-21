@@ -19,6 +19,7 @@ from app.routes import travel_history_routes
 from app.routes import alerts_router
 from app.routes import forecast_router
 from app.routes import route_performance
+from app.routes import route_forecast_api
 
 app = FastAPI()
 
@@ -49,6 +50,7 @@ app.include_router(travel_history_routes.router)
 app.include_router(alerts_router.router)
 app.include_router(forecast_router.router)
 app.include_router(route_performance.router)
+app.include_router(route_forecast_api.router)
 
 @app.get("/")
 def root():
