@@ -10,3 +10,4 @@ frontend/crowdease/lib/firebase_options.dart
 backend/env
 backend/gtfs_data/
 serviceAccountKey.json
+processed_with_route/
