@@ -1,136 +1,295 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:fl_chart/fl_chart.dart';
+import '../../../core/http_helper.dart';
+import 'forecast_search_screen.dart';
 
-class SimulatedForecastScreen extends StatelessWidget {
+class SimulatedForecastScreen extends StatefulWidget {
   const SimulatedForecastScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final List<double> forecastValues = [3, 5, 7, 3, 5, 1.5, 1.5];
-    final List<String> days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  State<SimulatedForecastScreen> createState() =>
+      _SimulatedForecastScreenState();
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Simulated Forecast"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.home),
-            onPressed: () => Navigator.pop(context),
-          )
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+class _SimulatedForecastScreenState extends State<SimulatedForecastScreen> {
+  Map<String, dynamic> timeBandData = {};
+  Map<String, dynamic> weeklyData = {};
+  bool isLoading = true;
+
+  final List<String> days = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+
+  final List<String> hourLabels = List.generate(
+    24,
+    (i) => i.toString().padLeft(2, '0') + ":00",
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    fetchData();
+  }
+
+  Future<void> fetchData() async {
+    final response = await HttpHelper.get('/forecast/weekly');
+    if (response != null && response['time_band_forecast'] != null) {
+      setState(() {
+        timeBandData = Map<String, dynamic>.from(
+          response['time_band_forecast'],
+        );
+        weeklyData = Map<String, dynamic>.from(response['weekly_forecast']);
+        isLoading = false;
+      });
+    } else {
+      setState(() => isLoading = false);
+    }
+  }
+
+  String getCrowdingLevelText(num value) {
+    if (value >= 0.1) return 'High';
+    if (value >= 0.07) return 'Moderate';
+    return 'Low';
+  }
+
+  Widget buildWeeklySummary() {
+    final sorted =
+        weeklyData.entries.toList()
+          ..sort((a, b) => (b.value as num).compareTo(a.value as num));
+    final peakDay = sorted.first;
+    final quietDay = sorted.last;
+
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Theme.of(context).dividerColor),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+
           children: [
-            const Text(
-              "Weekly Crowd Forecast",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              height: 250,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.indigo.withOpacity(0.1),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  )
-                ],
-              ),
-              child: BarChart(
-                BarChartData(
-                  alignment: BarChartAlignment.spaceAround,
-                  maxY: 8,
-                  barTouchData: BarTouchData(enabled: false),
-                  titlesData: FlTitlesData(
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (value, meta) => Text(
-                          days[value.toInt()],
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        reservedSize: 28,
-                      ),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (value, meta) {
-                          switch (value.toInt()) {
-                            case 2:
-                              return const Text("Low");
-                            case 5:
-                              return const Text("Med");
-                            case 8:
-                              return const Text("High");
-                            default:
-                              return const SizedBox.shrink();
-                          }
-                        },
-                        reservedSize: 32,
-                      ),
-                    ),
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  gridData: FlGridData(show: true),
-                  barGroups: List.generate(forecastValues.length, (i) {
-                    return BarChartGroupData(
-                      x: i,
-                      barRods: [
-                        BarChartRodData(
-                          toY: forecastValues[i],
-                          width: 18,
-                          borderRadius: BorderRadius.circular(6),
-                          gradient: LinearGradient(
-                            colors: [Colors.indigo, Colors.deepPurpleAccent],
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                          ),
-                        ),
-                      ],
-                    );
-                  }),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ForecastSearchScreen()),
+                );
+              },
+              icon: const Icon(Icons.show_chart),
+              label: const Text("View Forecast By Route and Day"),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 16,
                 ),
               ),
             ),
-            const SizedBox(height: 32),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.blueGrey.shade50,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.blueGrey.shade100),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "📊 Insights",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    "• Wednesday has the highest forecast.\n"
-                    "• Weekends are least crowded.\n"
-                    "• Try traveling on Tuesday or Thursday for smoother journeys.",
-                    style: TextStyle(height: 1.5),
-                  ),
-                ],
-              ),
+            const SizedBox(height: 16),
+
+            const Text(
+              "📊 Weekly Insights",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "• ${peakDay.key} has the highest crowding: ${getCrowdingLevelText(peakDay.value)}",
+            ),
+            Text(
+              "• ${quietDay.key} is the least crowded: ${getCrowdingLevelText(quietDay.value)}",
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              "• Consider traveling mid-week or during low periods for a better experience.",
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget buildLineChart() {
+    List<LineChartBarData> lines = [];
+
+    for (var day in days) {
+      final band = Map<String, dynamic>.from(timeBandData[day] ?? {});
+      final entries =
+          hourLabels.map((hour) {
+            final nextHour = int.parse(hour.split(":")[0]) + 1;
+            final label = "$hour to ${nextHour.toString().padLeft(2, '0')}:00";
+            return (band[label] as num?)?.toDouble() ?? 0.0;
+          }).toList();
+
+      lines.add(
+        LineChartBarData(
+          spots: List.generate(
+            entries.length,
+            (i) => FlSpot(i.toDouble(), entries[i]),
+          ),
+          isCurved: true,
+          color: Colors.cyan,
+          barWidth: 2,
+          dotData: FlDotData(show: false),
+          belowBarData: BarAreaData(show: false),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          const Text(
+            "📈 Hourly Trends (All Days)",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 300,
+            child: LineChart(
+              LineChartData(
+                lineBarsData: lines,
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    axisNameWidget: const Text("Hour of Day"),
+                    axisNameSize: 20,
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 4,
+                      getTitlesWidget:
+                          (value, _) => Text(
+                            hourLabels[value.toInt() % 24],
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    axisNameWidget: const Text("Crowding Level"),
+                    axisNameSize: 20,
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 0.05,
+                      getTitlesWidget:
+                          (value, _) => Text(
+                            value.toStringAsFixed(2),
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                    ),
+                  ),
+                  topTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                gridData: FlGridData(show: true),
+                borderData: FlBorderData(show: true),
+                minX: 0,
+                maxX: 23,
+                minY: 0,
+                maxY: 0.15,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildDailyCards() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children:
+          days.map((day) {
+            final band = Map<String, dynamic>.from(timeBandData[day] ?? {});
+            if (band.isEmpty) return const SizedBox();
+
+            final sorted =
+                band.entries.toList()
+                  ..sort((a, b) => (b.value as num).compareTo(a.value as num));
+            final peak = sorted.first;
+            final quiet = sorted.last;
+
+            return Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.primaryContainer.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    day,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Text("Busiest: ${peak.key} → ${peak.value}"),
+                  // Text("Quietest: ${quiet.key} → ${quiet.value}"),
+                  Text("Busiest: ${peak.key}"),
+                  Text("Quietest: ${quiet.key}"),
+                ],
+              ),
+            );
+          }).toList(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Crowd Forecast Summary"),
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: fetchData),
+        ],
+      ),
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    buildWeeklySummary(),
+                    const SizedBox(height: 16),
+                    buildLineChart(),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "Daily Peak & Quiet Hours",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    buildDailyCards(),
+                  ],
+                ),
+              ),
     );
   }
 }

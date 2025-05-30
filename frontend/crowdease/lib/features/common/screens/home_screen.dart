@@ -155,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-      const Center(child: Text('Alerts & Personalized Suggestions')),
+     const AlertsAndNotificationsScreen(),
       CrowdMapAndPlannerScreen(),
       FeedbackScreen(),
     ];
@@ -254,7 +254,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const TravelHistoryScreen()),
+                  // MaterialPageRoute(builder: (_) => const TravelHistoryScreen()),
+                  MaterialPageRoute(builder: (_) => TravelHistoryScreen(userId: user?.uid ?? ''),),
                 );
               },
             ),

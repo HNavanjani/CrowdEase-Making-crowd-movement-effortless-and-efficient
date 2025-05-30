@@ -6,8 +6,9 @@ __pycache__/
 .vscode/
 datasets/
 processed/
+processed_with_route/
 frontend/crowdease/lib/firebase_options.dart
 backend/env
 backend/gtfs_data/
 serviceAccountKey.json
-processed_with_route/
+lookup_route_mapping.csv

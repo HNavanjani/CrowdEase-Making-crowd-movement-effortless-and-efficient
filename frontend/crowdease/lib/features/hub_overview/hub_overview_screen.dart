@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:crowdease/features/crowd_map_planner/crowd_map_and_planner_screen.dart';
+import 'package:crowdease/features/alerts/screens/alerts_and_notifications.dart';
+
 import '../../core/http_helper.dart';
 
 class HubOverviewScreen extends StatefulWidget {
   final String userId;
 
-  const HubOverviewScreen({
-    super.key,
-    required this.userId,
-  });
+  const HubOverviewScreen({super.key, required this.userId});
 
   @override
   State<HubOverviewScreen> createState() => _HubOverviewScreenState();
@@ -80,10 +79,13 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
       regularRoute = data["regular_route"];
       rawFavorites = List<String>.from(data["favorite_routes"]);
 
-      favoriteRoutes = routeLabels.keys
-          .where((fullId) =>
-              rawFavorites.any((shortId) => fullId.contains(shortId)))
-          .toList();
+      favoriteRoutes =
+          routeLabels.keys
+              .where(
+                (fullId) =>
+                    rawFavorites.any((shortId) => fullId.contains(shortId)),
+              )
+              .toList();
 
       setState(() => isLoading = false);
       _predictAllFavorites();
@@ -122,12 +124,11 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
   @override
   Widget build(BuildContext context) {
     final userName = user?.displayName ?? "Commuter";
-    final suggestion = "Check predictions before you leave to avoid unexpected crowding. Travel 10 minutes earlier to beat the rush!";
+    final suggestion =
+        "Check predictions before you leave to avoid unexpected crowding. Travel 10 minutes earlier to beat the rush!";
 
     if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final regularRouteFullId = routeLabels.keys.firstWhere(
@@ -139,32 +140,49 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
         routeLabels[regularRouteFullId] ?? regularRouteFullId;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Card(
-              color: Colors.indigo.shade50,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              color: Theme.of(context).colorScheme.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: ListTile(
-                leading: const Icon(Icons.person_pin, color: Colors.indigo, size: 36),
+                leading: const Icon(
+                  Icons.person_pin,
+                  color: Colors.indigo,
+                  size: 36,
+                ),
                 title: Text(
                   'Welcome, $userName!',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                subtitle: Text('Your regular route is: Route $regularRouteLabel'),
+                subtitle: Text(
+                  'Your regular route is: Route $regularRouteLabel',
+                ),
               ),
             ),
             const SizedBox(height: 20),
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const Icon(Icons.lightbulb_outline, color: Colors.orangeAccent, size: 30),
+                    const Icon(
+                      Icons.lightbulb_outline,
+                      color: Colors.orangeAccent,
+                      size: 30,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -177,9 +195,11 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Current Route Crowd Predictions:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 10),
             if (favoriteRoutes.isEmpty)
@@ -190,9 +210,14 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
                 final label = routeLabels[routeId] ?? routeId;
                 return Card(
                   child: ListTile(
-                    leading: const Icon(Icons.directions_bus, color: Colors.indigo),
+                    leading: const Icon(
+                      Icons.directions_bus,
+                      color: Colors.indigo,
+                    ),
                     title: Text("Route $label"),
-                    subtitle: Text("Crowd Prediction: $prediction (Checked at $currentTime)"),
+                    subtitle: Text(
+                      "Crowd Prediction: $prediction (Checked at $currentTime)",
+                    ),
                   ),
                 );
               }),
@@ -201,7 +226,14 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 OutlinedButton.icon(
-                  onPressed: () => Navigator.pushNamed(context, '/alerts'),
+                   onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AlertsAndNotificationsScreen(),
+                      ),
+                    );
+                  },
                   icon: const Icon(Icons.notifications, color: Colors.indigo),
                   label: const Text("See Alerts"),
                 ),
@@ -209,7 +241,9 @@ class _HubOverviewScreenState extends State<HubOverviewScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const CrowdMapAndPlannerScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const CrowdMapAndPlannerScreen(),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.alt_route, color: Colors.indigo),

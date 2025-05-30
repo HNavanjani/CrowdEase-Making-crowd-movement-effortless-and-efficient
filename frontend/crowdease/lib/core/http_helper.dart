@@ -42,8 +42,13 @@ class HttpHelper {
         body: jsonEncode(body),
       ).timeout(timeoutDuration);
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (response.body.isEmpty) {
+          print("POST success: ${response.statusCode}, but no body");
+          return true;
+        } else {
+          return jsonDecode(response.body);
+        }
       } else {
         print("POST failed: ${response.statusCode}");
         return null;

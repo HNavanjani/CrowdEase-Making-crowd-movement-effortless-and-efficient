@@ -82,13 +82,13 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
       "regular_route": selectedRegular,
     };
 
-    final endpoint = hasSavedPreferences
-        ? "/update-preferences"
-        : "/save-preferences";
+    final endpoint =
+        hasSavedPreferences ? "/update-preferences" : "/save-preferences";
 
-    final response = hasSavedPreferences
-        ? await HttpHelper.put(endpoint, body)
-        : await HttpHelper.post(endpoint, body);
+    final response =
+        hasSavedPreferences
+            ? await HttpHelper.put(endpoint, body)
+            : await HttpHelper.post(endpoint, body);
 
     if (response != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -96,35 +96,39 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
       );
       Future.delayed(const Duration(seconds: 1), () => Navigator.pop(context));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error saving preferences")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Error saving preferences")));
     }
   }
 
   Future<void> deletePreferences() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Confirm Deletion"),
-        content: const Text("Are you sure you want to delete all preferences?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
+      builder:
+          (context) => AlertDialog(
+            title: const Text("Confirm Deletion"),
+            content: const Text(
+              "Are you sure you want to delete all preferences?",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text("Delete"),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Delete"),
-          ),
-        ],
-      ),
     );
 
     if (confirm != true) return;
 
-    final response =
-        await HttpHelper.delete("/remove-preferences/$normalizedUserId");
+    final response = await HttpHelper.delete(
+      "/remove-preferences/$normalizedUserId",
+    );
 
     if (response != null) {
       setState(() {
@@ -146,12 +150,15 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
   void updateFilteredRoutes(String query) {
     setState(() {
       searchQuery = query;
-      filteredRoutes = structuredRoutes
-          .where((r) =>
-              r.shortName.toLowerCase().contains(query.toLowerCase()) ||
-              r.longName.toLowerCase().contains(query.toLowerCase()))
-          .map((r) => r.routeId)
-          .toList();
+      filteredRoutes =
+          structuredRoutes
+              .where(
+                (r) =>
+                    r.shortName.toLowerCase().contains(query.toLowerCase()) ||
+                    r.longName.toLowerCase().contains(query.toLowerCase()),
+              )
+              .map((r) => r.routeId)
+              .toList();
     });
   }
 
@@ -183,12 +190,13 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                 final isSelected = selectedItems.contains(routeId);
                 final routeObj = structuredRoutes.firstWhere(
                   (r) => r.routeId == routeId,
-                  orElse: () => RouteData(
-                    routeId: routeId,
-                    shortName: routeId,
-                    longName: '',
-                    desc: '',
-                  ),
+                  orElse:
+                      () => RouteData(
+                        routeId: routeId,
+                        shortName: routeId,
+                        longName: '',
+                        desc: '',
+                      ),
                 );
                 final routeLabel =
                     '${routeObj.shortName} – ${routeObj.longName}';
@@ -203,8 +211,8 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                     title: Text(routeLabel, style: highlightStyle),
                     value: routeId,
                     groupValue: selectedRegular,
-                    onChanged: (value) =>
-                        setState(() => selectedRegular = value),
+                    onChanged:
+                        (value) => setState(() => selectedRegular = value),
                   );
                 } else {
                   return CheckboxListTile(
@@ -239,168 +247,164 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Select Your Preferred Routes")),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 12.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.info_outline,
+                            size: 18,
+                            color: Colors.deepPurple,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              "Tip: You can search by route number or bus name, then tick to select favorites and pick a regular route.",
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.copyWith(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Favorite Routes (Max 5)",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            buildSearchableList(
+                              selectedItems: selectedFavorites,
+                              onItemChanged: (route, selected) {
+                                if (selected) {
+                                  selectedFavorites.add(route);
+                                } else {
+                                  selectedFavorites.remove(route);
+                                }
+                              },
+                              maxSelection: 5,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Regular Route",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            buildSearchableList(
+                              selectedItems:
+                                  selectedRegular != null
+                                      ? [selectedRegular!]
+                                      : [],
+                              onItemChanged: (route, selected) {
+                                selectedRegular = selected ? route : null;
+                              },
+                              maxSelection: 1,
+                              isRadio: true,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Card(
+                      color: Theme.of(context).colorScheme.surface,
+                      child: ListTile(
+                        title: const Text("Your Selected Preferences"),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Favorites: ${selectedFavorites.map((id) {
+                                final r = structuredRoutes.firstWhere((e) => e.routeId == id, orElse: () => RouteData(routeId: id, shortName: id, longName: '', desc: ''));
+                                return '${r.shortName} – ${r.longName}';
+                              }).join(', ')}",
+                            ),
+                            Text(
+                              "Regular: ${selectedRegular != null ? (() {
+                                    final r = structuredRoutes.firstWhere((e) => e.routeId == selectedRegular, orElse: () => RouteData(routeId: selectedRegular!, shortName: selectedRegular!, longName: '', desc: ''));
+                                    return '${r.shortName} – ${r.longName}';
+                                  })() : 'Not selected'}",
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Icon(Icons.info_outline,
-                            size: 18, color: Colors.deepPurple),
-                        SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            "Tip: You can search by route number or bus name, then tick to select favorites and pick a regular route.",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                        ElevatedButton.icon(
+                          onPressed: isReadyToSave ? savePreferences : null,
+                          icon: const Icon(Icons.save),
+                          label: const Text("Save Preferences"),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: deletePreferences,
+                          icon: const Icon(Icons.delete),
+                          label: const Text("Delete All"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade400,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Favorite Routes (Max 5)",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          buildSearchableList(
-                            selectedItems: selectedFavorites,
-                            onItemChanged: (route, selected) {
-                              if (selected) {
-                                selectedFavorites.add(route);
-                              } else {
-                                selectedFavorites.remove(route);
-                              }
-                            },
-                            maxSelection: 5,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Regular Route",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          buildSearchableList(
-                            selectedItems: selectedRegular != null
-                                ? [selectedRegular!]
-                                : [],
-                            onItemChanged: (route, selected) {
-                              selectedRegular = selected ? route : null;
-                            },
-                            maxSelection: 1,
-                            isRadio: true,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Card(
-                    color: Colors.grey.shade100,
-                    child: ListTile(
-                      title: const Text("Your Selected Preferences"),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Favorites: ${selectedFavorites.map((id) {
-                              final r = structuredRoutes.firstWhere(
-                                  (e) => e.routeId == id,
-                                  orElse: () => RouteData(
-                                      routeId: id,
-                                      shortName: id,
-                                      longName: '',
-                                      desc: ''));
-                              return '${r.shortName} – ${r.longName}';
-                            }).join(', ')}",
-                          ),
-                          Text(
-                            "Regular: ${selectedRegular != null ? (() {
-                                  final r = structuredRoutes.firstWhere(
-                                      (e) => e.routeId == selectedRegular,
-                                      orElse: () => RouteData(
-                                          routeId: selectedRegular!,
-                                          shortName: selectedRegular!,
-                                          longName: '',
-                                          desc: ''));
-                                  return '${r.shortName} – ${r.longName}';
-                                })() : 'Not selected'}",
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: isReadyToSave ? savePreferences : null,
-                        icon: const Icon(Icons.save),
-                        label: const Text("Save Preferences"),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: deletePreferences,
-                        icon: const Icon(Icons.delete),
-                        label: const Text("Delete All"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade400,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
     );
   }
 }
