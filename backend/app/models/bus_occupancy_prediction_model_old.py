@@ -6,8 +6,6 @@ import joblib
 import datetime
 import matplotlib.pyplot as plt
 import time
-import sys
-import traceback
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
@@ -20,55 +18,39 @@ from app.utils.setup_data import download_and_unzip_force
 if os.getenv("RENDER") == "true":
     download_and_unzip_force()
 
-
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-
-# Define all paths relative to project root
-model_dir = os.path.join(BASE_DIR, "models")
-data_dir = os.path.join(BASE_DIR, "..", "processed_with_route")
-feedback_file = os.path.join(BASE_DIR, "..", "feedback.csv")
-report_dir = os.path.join(model_dir, "..", "model_metrics")
+model_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "models"))
+data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "processed"))
+feedback_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "feedback.csv"))
+report_dir = os.path.abspath(os.path.join(model_dir, "..", "model_metrics"))
 route_encoder_path = os.path.join(model_dir, "route_label_encoder.pkl")
 
-# Ensure directories exist
 os.makedirs(model_dir, exist_ok=True)
 os.makedirs(report_dir, exist_ok=True)
-
-
 
 def load_all_data():
     all_files = sorted(glob.glob(os.path.join(data_dir, "*.csv")))
     df_list = []
-    total_rows = 0
     for file in all_files:
         try:
             df = pd.read_csv(file, dtype=str, usecols=[
                 "ROUTE", "TIMETABLE_HOUR_BAND", "TRIP_POINT", "TIMETABLE_TIME",
                 "ACTUAL_TIME", "CAPACITY_BUCKET", "CAPACITY_BUCKET_ENCODED"
             ], low_memory=False)
-            total_rows += len(df)
             df_list.append(df)
         except Exception as e:
-            print(f"[ERROR] Failed to read {file}: {e}")
+            print(f"Failed to read {file}: {e}")
     if os.path.exists(feedback_file):
         try:
             df = pd.read_csv(feedback_file, dtype=str, usecols=[
                 "ROUTE", "TIMETABLE_HOUR_BAND", "TRIP_POINT", "TIMETABLE_TIME",
                 "ACTUAL_TIME", "CAPACITY_BUCKET", "CAPACITY_BUCKET_ENCODED"
             ], low_memory=False)
-            print(f"[INFO] Loaded feedback file with {len(df):,} rows.")
             df_list.append(df)
         except Exception as e:
-            print(f"[ERROR] Failed to read feedback file: {e}")
+            print(f"Failed to read feedback file: {e}")
     if not df_list:
         raise ValueError("No valid data files found to concatenate.")
-    combined_df = pd.concat(df_list, ignore_index=True)
-    print(f"[INFO] Loaded total rows before cleaning: {len(combined_df):,}")
-    before_drop = len(combined_df)
-    combined_df = combined_df[combined_df["ROUTE"].notna() & (combined_df["ROUTE"] != "N/A") & (combined_df["ROUTE"] != "")]
-    after_drop = len(combined_df)
-    print(f"[INFO] Dropped {before_drop - after_drop:,} rows with invalid ROUTE values ('N/A', empty, or None).")
-    return combined_df
+    return pd.concat(df_list, ignore_index=True)
 
 def prepare_features(df):
     df = df.copy()
@@ -85,16 +67,16 @@ def prepare_features(df):
 
 def train_models():
     df = load_all_data()
-    print(f"[INFO] Training on full dataset: {len(df):,} rows")
+    print(f"Training on full dataset: {len(df):,} rows")
     X, y = prepare_features(df)
-    print("[INFO] Class distribution:\n", y.value_counts())
+    print("Class distribution:\n", y.value_counts())
 
     X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=0.15, stratify=y, random_state=42)
     X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp, test_size=0.1765, stratify=y_temp, random_state=42)
 
     models = {
         "LogisticRegression": LogisticRegression(max_iter=200),
-        "RandomForest": RandomForestClassifier(n_estimators=50, max_depth=10, n_jobs=1),
+        "RandomForest": RandomForestClassifier(n_estimators=50, max_depth=10, n_jobs=-1),
         "XGBoost": XGBClassifier(n_estimators=50, max_depth=6, use_label_encoder=False, eval_metric="mlogloss")
     }
 
@@ -106,7 +88,6 @@ def train_models():
     train_times = {}
 
     for name, model in models.items():
-        print(f"[INFO] Training {name}...")
         start_time = time.time()
         model.fit(X_train, y_train)
         y_pred = model.predict(X_val)
@@ -176,11 +157,11 @@ def predict(input_dict):
     model_path = os.path.join(model_dir, "best_model.pkl")
     feature_path = os.path.join(model_dir, "feature_columns.pkl")
     if not os.path.exists(model_path):
-        raise FileNotFoundError("No trained model found.")
+        raise FileNotFoundError("No trained model found. Please train the model first.")
     if not os.path.exists(feature_path):
         raise FileNotFoundError("Feature columns file not found.")
     if not os.path.exists(route_encoder_path):
-        raise FileNotFoundError("Route encoder file not found.")
+        raise FileNotFoundError("Route label encoder not found.")
 
     model = joblib.load(model_path)
     feature_columns = joblib.load(feature_path)
@@ -210,5 +191,5 @@ def append_feedback(feedback_row):
     df = pd.read_csv(feedback_file)
     if len(df) >= 100 and len(df) % 100 == 0:
         if os.getenv("RUN_RETRAINING") == "true":
-            print("[INFO] Retraining model due to feedback threshold reached.")
+            print("Threshold reached. Retraining model with feedback included.")
             train_models()

@@ -6,7 +6,7 @@ from pathlib import Path
 
 # Paths
 base_dir = Path(__file__).resolve().parents[3]
-data_dir = base_dir / "processed"
+data_dir = base_dir / "processed_with_route"
 cache_file = base_dir / "insight_outputs" / "forecast_weekly.json"
 os.makedirs(cache_file.parent, exist_ok=True)
 

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import traceback
+import sys
 from app.models.bus_occupancy_prediction_model import train_models, predict, append_feedback, model_dir
 import os
 from pathlib import Path

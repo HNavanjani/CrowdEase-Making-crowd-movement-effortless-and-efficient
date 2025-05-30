@@ -6,11 +6,11 @@ import os
 
 # Setup directories
 base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
-data_dir = os.path.join(base_dir, "processed")
+data_dir = os.path.join(base_dir, "processed_with_route")
 output_dir = os.path.join(base_dir, "insight_outputs")
 os.makedirs(output_dir, exist_ok=True)
 
-# Load all processed CSVs
+# Load all processed_with_route CSVs
 all_files = sorted(glob.glob(os.path.join(data_dir, "*.csv")))
 df_list = []
 
@@ -26,7 +26,7 @@ for file in all_files:
         print(f"Error reading {file}: {e}")
 
 if not df_list:
-    raise ValueError("No CSV files found in processed folder.")
+    raise ValueError("No CSV files found in processed_with_route folder.")
 
 df = pd.concat(df_list, ignore_index=True)
 df["CAPACITY_BUCKET_ENCODED"] = pd.to_numeric(df["CAPACITY_BUCKET_ENCODED"], errors="coerce")

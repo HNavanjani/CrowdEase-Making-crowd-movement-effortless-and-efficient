@@ -20,6 +20,8 @@ from app.routes import alerts_router
 from app.routes import forecast_router
 from app.routes import route_performance
 from app.routes import route_forecast_api
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI()
 
